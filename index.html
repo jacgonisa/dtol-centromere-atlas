@@ -508,15 +508,26 @@ fetch('tree_data.json')
         .on('click',()=>showPanel(d.data.name));
     });
 
-    /* time rings */
+    /* time rings: branch lengths are MYA from root to present */
     const rG=g.insert('g',':first-child');
-    [100,200,300,400,500,600,700].forEach(mya=>{
+    function niceTimeStep(maxAge){
+      if(maxAge > 1200) return 250;
+      if(maxAge > 700) return 100;
+      if(maxAge > 300) return 50;
+      return 25;
+    }
+    const timeStep = niceTimeStep(maxDist);
+    const timeTicks = d3.range(timeStep, maxDist, timeStep);
+    timeTicks.forEach(mya=>{
       const r=(mya/maxDist)*R; if(r>=R||r<5) return;
       rG.append('circle').attr('r',r).attr('fill','none')
-        .attr('stroke','#ddd').attr('stroke-width',.4).attr('stroke-dasharray','2,3');
-      rG.append('text').attr('x',r+2).attr('y',-3)
-        .attr('font-size',8).attr('fill','#bbb').text(mya);
+        .attr('stroke','#d7d7d7').attr('stroke-width',.45).attr('stroke-dasharray','2,3');
+      rG.append('text').attr('x',r+3).attr('y',-4)
+        .attr('font-size',8).attr('fill','#9e9e9e').text(`${mya} MYA`);
     });
+    rG.append('text').attr('x',R-34).attr('y',12)
+      .attr('font-size',8).attr('fill','#777').attr('text-anchor','end')
+      .text(`root ${Math.round(maxDist)} MYA`);
 
     /* zoom */
     const zoom=d3.zoom().scaleExtent([.15,20])
