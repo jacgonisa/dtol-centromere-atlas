@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DToL Centromere Atlas — 325 species</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f5f5f5; color:#212121;
+       display:flex; height:100vh; overflow:hidden; }
+
+/* sidebar */
+#sidebar { width:300px; min-width:240px; max-width:620px; background:#fff; border-right:1px solid #e0e0e0;
+  display:flex; flex-direction:column; overflow:hidden; position:relative;
+  box-shadow:2px 0 8px rgba(0,0,0,.08); z-index:10; }
+#resize-handle { position:absolute; top:0; right:0; width:8px; height:100%; cursor:col-resize;
+  background:transparent; z-index:30; }
+#resize-handle::after { content:""; position:absolute; top:0; right:2px; width:1px; height:100%;
+  background:rgba(0,0,0,.08); }
+#resize-handle:hover::after, body.resizing #resize-handle::after { right:1px; width:3px; background:#3949ab; }
+body.resizing { cursor:col-resize; user-select:none; }
+#hdr { padding:14px 16px; background:linear-gradient(135deg,#1a237e,#283593); color:#fff; flex-shrink:0; }
+#hdr h1 { font-size:14px; font-weight:700; }
+#hdr p  { font-size:10px; margin-top:3px; opacity:.75; }
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:9px; }
+.stat { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:6px; padding:5px 4px; }
+.stat b { display:block; font-size:12px; line-height:1; }
+.stat span { display:block; font-size:8.5px; opacity:.78; margin-top:2px; }
+.view-nav { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; margin-top:8px; }
+.view-nav a { color:#fff; text-decoration:none; text-align:center; font-size:9px;
+  border:1px solid rgba(255,255,255,.22); border-radius:5px; padding:4px 3px;
+  background:rgba(255,255,255,.09); }
+.view-nav a:hover, .view-nav a.active { background:rgba(255,255,255,.24); }
+#swrap  { padding:8px 12px; flex-shrink:0; }
+#sbox   { width:100%; padding:6px 10px; border:1px solid #bdbdbd; border-radius:20px; font-size:12px; outline:none; }
+#sbox:focus { border-color:#3949ab; }
+
+#leg { padding:6px 12px 8px; border-top:1px solid #eee; flex-shrink:0; font-size:11px;
+  height:230px; min-height:38px; max-height:58vh; overflow:auto; resize:vertical; }
+#leg.collapsed { height:38px!important; overflow:hidden; resize:none; }
+.legend-tools { position:sticky; top:0; z-index:2; display:flex; gap:4px; align-items:center;
+  padding:0 0 5px; margin-bottom:4px; background:#fff; border-bottom:1px solid #f0f0f0; }
+.legend-tools button { border:1px solid #d0d0d0; background:#fafafa; color:#444; border-radius:4px;
+  padding:2px 6px; font-size:9.5px; cursor:pointer; }
+.legend-tools button:hover, #leg.editing .legend-edit { background:#e8eaf6; border-color:#9fa8da; }
+.legend-tools .legend-spacer { flex:1; }
+#leg.collapsed .lh, #leg.collapsed .li { display:none; }
+#leg.editing .legend-label, #leg.editing .lh { outline:1px dashed #9fa8da; background:#f6f7ff; border-radius:3px; padding:1px 2px; }
+.legend-color { display:none; width:18px; height:18px; border:0; padding:0; background:transparent; cursor:pointer; }
+#leg.editing .legend-color { display:inline-block; }
+.lh  { font-size:9.5px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.5px; margin:5px 0 3px; }
+.li  { display:flex; align-items:center; gap:5px; margin-bottom:2px; color:#444; }
+.dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.sq  { width:9px; height:9px; flex-shrink:0; }
+
+/* species panel */
+#panel { flex:1; overflow-y:auto; }
+#ph { color:#9e9e9e; text-align:center; margin-top:30px; line-height:1.9; font-size:11.5px; padding:0 16px; }
+.sp-header { padding:12px 14px 8px; background:#e8eaf6; border-bottom:2px solid #9fa8da; }
+.sp-header h2 { font-size:14px; font-style:italic; color:#1a237e; }
+.sp-header .sub { font-size:10.5px; color:#555; margin-top:2px; }
+
+.section { border-bottom:1px solid #f0f0f0; }
+.section-title { padding:7px 14px 4px; font-size:10px; font-weight:700; color:#888;
+  text-transform:uppercase; letter-spacing:.5px; background:#fafafa; }
+.row { display:flex; justify-content:space-between; padding:4px 14px;
+  border-bottom:1px solid #f8f8f8; gap:8px; font-size:11.5px; }
+.lbl { color:#757575; flex-shrink:0; }
+.val { font-weight:500; text-align:right; }
+.badge { display:inline-block; padding:1px 7px; border-radius:3px; font-size:10px; color:#fff; }
+
+/* satellite families table */
+.fam-table { width:100%; font-size:10.5px; border-collapse:collapse; margin:2px 0 6px; }
+.fam-table th { background:#f5f5f5; padding:3px 8px; text-align:left; color:#666; font-weight:600; }
+.fam-table td { padding:3px 8px; border-top:1px solid #f0f0f0; }
+
+/* sequence viewer */
+.seq-box { font-family:'Courier New',monospace; font-size:10px; background:#1e1e1e;
+  color:#a8ff60; padding:10px 12px; overflow-x:auto; white-space:pre; line-height:1.5;
+  border-radius:0 0 4px 4px; max-height:180px; overflow-y:auto; }
+.seq-label { padding:5px 14px 2px; font-size:10px; font-weight:600; color:#555;
+  background:#f5f5f5; border-top:1px solid #e0e0e0; }
+.protein-record { border-top:1px solid #eeeeee; }
+.protein-record summary { cursor:pointer; padding:5px 14px; font-size:10.5px; color:#3949ab;
+  font-family:'Courier New',monospace; overflow-wrap:anywhere; }
+.protein-seq { margin:0; padding:8px 12px 10px; background:#111827; color:#d1fae5;
+  font-family:'Courier New',monospace; font-size:10px; line-height:1.45; white-space:pre-wrap;
+  word-break:break-all; max-height:180px; overflow:auto; }
+.stackbar { height:8px; display:flex; width:100%; overflow:hidden; border-radius:4px;
+  background:#eeeeee; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); margin-top:2px; }
+.seg { height:8px; min-width:0; }
+.seg.sat { background:#ff006e; }
+.seg.te { background:#3a86ff; }
+.seg.gene { background:#2E7D32; }
+.mini-note { padding:2px 14px 7px; font-size:9.5px; color:#777; line-height:1.35; }
+
+/* tree */
+#tree-panel { flex:1; position:relative; overflow:hidden; background:#fafafa; }
+#tree-panel svg { position:absolute; top:0; left:0; width:100%; height:100%; }
+#err { position:absolute; top:8px; left:8px; background:#ffebee; color:#c62828;
+  padding:7px 12px; border-radius:4px; font-size:11px; max-width:380px; display:none; z-index:99; }
+#zc { position:absolute; bottom:14px; right:14px; display:flex; flex-direction:column; gap:4px; }
+.zb { width:30px; height:30px; border:1px solid #ccc; background:#fff; border-radius:6px;
+  cursor:pointer; font-size:17px; display:flex; align-items:center; justify-content:center;
+  color:#444; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+.zb:hover { background:#e8eaf6; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="resize-handle" title="Drag to resize panel"></div>
+  <div id="hdr">
+    <h1>DToL Centromere Atlas</h1>
+    <p>interactive species tree · click a tip to explore</p>
+    <div class="stats">
+      <div class="stat"><b id="st-tips">-</b><span>tips</span></div>
+      <div class="stat"><b id="st-sat">-</b><span>satellite</span></div>
+      <div class="stat"><b id="st-edta">-</b><span>EDTA map</span></div>
+    </div>
+    <div class="view-nav">
+      <a href="index.html" data-view="all">All</a>
+      <a href="index.html?view=metazoa" data-view="metazoa">Metazoa</a>
+      <a href="index.html?view=viridiplantae" data-view="viridiplantae">Plants</a>
+      <a href="index.html?view=fungi" data-view="fungi">Fungi</a>
+    </div>
+  </div>
+  <div id="swrap"><input id="sbox" type="text" placeholder="Search species…"></div>
+  <div id="leg">
+    <div class="lh">Centromere type</div>
+    <div class="li"><div class="dot" style="background:#ff006e"></div>Satellite</div>
+    <div class="li"><div class="dot" style="background:#3a86ff"></div>Transposon</div>
+    <div class="li"><div class="dot" style="background:#fb5609"></div>Holocentric (▲)</div>
+    <div class="li"><div class="dot" style="background:#8338ec"></div>Sat/Transposon</div>
+    <div class="li"><div class="dot" style="background:#808080"></div>Mono. seq. unknown</div>
+    <div class="li"><div class="dot" style="background:#808080"></div>Unknown</div>
+    <div class="lh">CENP-A copies</div>
+    <div class="li"><div class="sq" style="background:#eeeeee;border:1px solid #aaa"></div>0</div>
+    <div class="li"><div class="sq" style="background:#ffd166"></div>1</div>
+    <div class="li"><div class="sq" style="background:#f77f00"></div>2</div>
+    <div class="li"><div class="sq" style="background:#d62828"></div>3</div>
+    <div class="li"><div class="sq" style="background:#6a040f"></div>≥4</div>
+    <div class="lh">Outer bars</div>
+    <div class="li"><div class="sq" style="background:#ff006e;opacity:.8"></div>Satellite % genome</div>
+    <div class="li"><div class="sq" style="background:#3a86ff;opacity:.8"></div>Transposon % genome</div>
+    <div class="li"><div class="sq" style="background:#2E7D32;opacity:.8"></div>Gene % genome</div>
+    <div class="li">
+      <svg width="9" height="9"><defs><linearGradient id="lg"><stop offset="0" stop-color="#e3f2fd"/><stop offset="1" stop-color="#0d47a1"/></linearGradient></defs><rect width="9" height="9" fill="url(#lg)"/></svg>
+      Sat. monomer length
+    </div>
+  </div>
+  <div id="panel"><div id="ph">← Click any species tip<br>on the tree to open<br>its centromere dossier</div></div>
+</div>
+
+<div id="tree-panel">
+  <div id="err"></div>
+  <svg id="svg"></svg>
+  <div id="zc">
+    <button class="zb" id="zi">+</button>
+    <button class="zb" id="zo">−</button>
+    <button class="zb" id="zr" style="font-size:12px">⊙</button>
+  </div>
+</div>
+
+<script>
+function showErr(m){ const e=document.getElementById('err'); e.textContent=m; e.style.display='block'; }
+
+(function initSidebarResize(){
+  const sidebar=document.getElementById('sidebar');
+  const handle=document.getElementById('resize-handle');
+  const saved=+localStorage.getItem('dtolSidebarWidth');
+  const min=240, max=620;
+  if(saved) sidebar.style.width=Math.max(min,Math.min(max,saved))+'px';
+  let active=false;
+  handle.addEventListener('pointerdown',e=>{
+    active=true;
+    handle.setPointerCapture(e.pointerId);
+    document.body.classList.add('resizing');
+  });
+  handle.addEventListener('pointermove',e=>{
+    if(!active) return;
+    const w=Math.max(min,Math.min(max,e.clientX));
+    sidebar.style.width=w+'px';
+  });
+  function stop(e){
+    if(!active) return;
+    active=false;
+    document.body.classList.remove('resizing');
+    localStorage.setItem('dtolSidebarWidth', Math.round(sidebar.getBoundingClientRect().width));
+    try{ handle.releasePointerCapture(e.pointerId); }catch(_){}
+  }
+  handle.addEventListener('pointerup',stop);
+  handle.addEventListener('pointercancel',stop);
+})();
+
+(function initEditableLegend(){
+  const leg=document.getElementById('leg');
+  const savedH=+localStorage.getItem('dtolLegendHeight');
+  const collapsed=localStorage.getItem('dtolLegendCollapsed')==='1';
+  if(savedH) leg.style.height=Math.max(38,Math.min(window.innerHeight*.58,savedH))+'px';
+  if(collapsed) leg.classList.add('collapsed');
+
+  const tools=document.createElement('div');
+  tools.className='legend-tools';
+  tools.innerHTML='<button class="legend-edit" type="button">Edit</button><button class="legend-fold" type="button">Collapse</button><span class="legend-spacer"></span><button class="legend-reset" type="button">Reset</button>';
+  leg.prepend(tools);
+  const editBtn=tools.querySelector('.legend-edit');
+  const foldBtn=tools.querySelector('.legend-fold');
+  foldBtn.textContent=collapsed?'Expand':'Collapse';
+
+  function rgbToHex(v){
+    const ctx=document.createElement('canvas').getContext('2d');
+    ctx.fillStyle=v;
+    const out=ctx.fillStyle;
+    return out.startsWith('#') ? out : '#808080';
+  }
+  function swatchOf(row){ return row.querySelector('.dot,.sq'); }
+  const rows=[...leg.querySelectorAll('.li')];
+  const heads=[...leg.querySelectorAll('.lh')];
+  rows.forEach((row,i)=>{
+    row.dataset.legendIndex=i;
+    const sw=swatchOf(row);
+    if(sw){
+      const inp=document.createElement('input');
+      inp.type='color'; inp.className='legend-color'; inp.value=rgbToHex(getComputedStyle(sw).backgroundColor);
+      sw.after(inp);
+      inp.addEventListener('input',()=>{ sw.style.background=inp.value; saveLegend(); });
+    }
+    const label=document.createElement('span');
+    label.className='legend-label';
+    const text=[...row.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.textContent).join('').trim();
+    [...row.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE).forEach(n=>n.remove());
+    label.textContent=text;
+    row.append(label);
+  });
+
+  function applyLegend(){
+    const state=JSON.parse(localStorage.getItem('dtolLegendState')||'null');
+    if(!state) return;
+    heads.forEach((h,i)=>{ if(state.heads && state.heads[i]) h.textContent=state.heads[i]; });
+    rows.forEach((row,i)=>{
+      const item=state.rows && state.rows[i];
+      if(!item) return;
+      const label=row.querySelector('.legend-label');
+      const sw=swatchOf(row);
+      const inp=row.querySelector('.legend-color');
+      if(label && item.label) label.textContent=item.label;
+      if(sw && item.color){ sw.style.background=item.color; if(inp) inp.value=item.color; }
+    });
+  }
+  function saveLegend(){
+    const state={
+      heads: heads.map(h=>h.textContent.trim()),
+      rows: rows.map(row=>{
+        const sw=swatchOf(row);
+        return {
+          label:(row.querySelector('.legend-label')?.textContent||'').trim(),
+          color: sw ? rgbToHex(getComputedStyle(sw).backgroundColor) : null
+        };
+      })
+    };
+    localStorage.setItem('dtolLegendState', JSON.stringify(state));
+  }
+  applyLegend();
+
+  editBtn.addEventListener('click',()=>{
+    const editing=!leg.classList.contains('editing');
+    leg.classList.toggle('editing', editing);
+    editBtn.textContent=editing?'Done':'Edit';
+    [...heads, ...leg.querySelectorAll('.legend-label')].forEach(el=>{
+      el.contentEditable=editing ? 'true' : 'false';
+      if(!editing) el.blur();
+    });
+    if(!editing) saveLegend();
+  });
+  leg.addEventListener('input',e=>{
+    if(e.target.classList.contains('legend-label') || e.target.classList.contains('lh')) saveLegend();
+  });
+  foldBtn.addEventListener('click',()=>{
+    leg.classList.toggle('collapsed');
+    const is=leg.classList.contains('collapsed');
+    foldBtn.textContent=is?'Expand':'Collapse';
+    localStorage.setItem('dtolLegendCollapsed', is?'1':'0');
+  });
+  tools.querySelector('.legend-reset').addEventListener('click',()=>{
+    localStorage.removeItem('dtolLegendState');
+    localStorage.removeItem('dtolLegendCollapsed');
+    localStorage.removeItem('dtolLegendHeight');
+    location.reload();
+  });
+  new ResizeObserver(()=>{
+    if(!leg.classList.contains('collapsed')) localStorage.setItem('dtolLegendHeight', Math.round(leg.getBoundingClientRect().height));
+  }).observe(leg);
+})();
+
+/* ── newick parser ─────────────────────────────────────────────────────────── */
+function parseNewick(str) {
+  let pos = 0;
+  const s = str.trim();
+  function skipWS(){ while(pos<s.length && s[pos]<=' ') pos++; }
+  function peek(){ skipWS(); return pos<s.length?s[pos]:null; }
+  function eat(c){ skipWS(); if(s[pos]===c){pos++;return true;} return false; }
+  function readToken(){
+    let t='';
+    while(pos<s.length && !'(),;:'.includes(s[pos])) t+=s[pos++];
+    return t.trim();
+  }
+  function readNum(){
+    let t='';
+    while(pos<s.length && /[0-9.eE+\-]/.test(s[pos])) t+=s[pos++];
+    return parseFloat(t)||0;
+  }
+  function node(){
+    const n={name:'',length:0,children:[]};
+    if(peek()==='('){
+      eat('('); n.children.push(node());
+      while(eat(',')) n.children.push(node());
+      eat(')');
+    }
+    n.name=readToken();
+    if(eat(':')) n.length=readNum();
+    return n;
+  }
+  try{ const r=node(); eat(';'); return r; }
+  catch(e){ showErr('Parse error: '+e.message); return null; }
+}
+
+/* ── colours ───────────────────────────────────────────────────────────────── */
+// same palette as the R figure
+const archCol = {
+  "Satellite":"#ff006e","Transposon":"#3a86ff","Holocentric":"#fb5609",
+  "Satellite/transposon":"#8338ec","Monocentric sequence unknown":"#808080","Unknown":"#808080"
+};
+const broadBg = {
+  Vertebrates:'#ddeaf7',Invertebrates:'#fff3e0',Viridiplantae:'#e5f4e6',
+  Fungi:'#f3e5f5',Protists:'#fce4ec',Other:'#f5f5f5'
+};
+const cenpaCol = ['#eeeeee','#ffd166','#f77f00','#d62828','#6a040f'];
+const monomerScale = d3.scaleSequential([50,2500], d3.interpolateBlues);
+const genomeStackMax = 125; // percent; rounded observed max from the figure workflow
+
+/* ── main ──────────────────────────────────────────────────────────────────── */
+const view = new URLSearchParams(window.location.search).get('view') || 'all';
+const viewPredicates = {
+  all: () => true,
+  fungi: s => (s.broad || '') === 'Fungi',
+  metazoa: s => ['Invertebrates','Vertebrates'].includes(s.broad || ''),
+  viridiplantae: s => (s.broad || '') === 'Viridiplantae'
+};
+const viewLabels = {
+  all: 'All species',
+  fungi: 'Fungi',
+  metazoa: 'Metazoa',
+  viridiplantae: 'Viridiplantae'
+};
+const viewFilter = viewPredicates[view] || viewPredicates.all;
+document.querySelectorAll('.view-nav a').forEach(a=>{
+  if(a.dataset.view === view || (view === 'all' && a.dataset.view === 'all')) a.classList.add('active');
+});
+document.title = `DToL Centromere Atlas — ${viewLabels[view] || 'All species'}`;
+
+fetch('tree_data.json')
+  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  .catch(e=>{ showErr('Cannot load tree_data.json: '+e.message); return null; })
+  .then(data=>{
+    if(!data) return;
+    const SP = data.species;
+    function sp(name){ return SP[(name||'').replace(/\.fa$/i,'').toLowerCase()]||{}; }
+
+    let root = parseNewick(data.newick);
+    if(!root) return;
+
+    function clonePruned(node){
+      const kids = (node.children || []).map(clonePruned).filter(Boolean);
+      const leaf = !node.children || !node.children.length;
+      if(leaf && !viewFilter(sp(node.name))) return null;
+      if(!leaf && !kids.length) return null;
+      return {name: node.name, length: node.length || 0, children: kids};
+    }
+    root = view === 'all' ? root : clonePruned(root);
+    if(!root){ showErr('No species matched this view'); return; }
+
+    const hier = d3.hierarchy(root, d=>d.children&&d.children.length?d.children:null);
+    hier.each(d=>{ d.dist=d.parent?(d.parent.dist||0)+(d.data.length||0):0; });
+    const maxDist = d3.max(hier.leaves(), d=>d.dist);
+    if(!maxDist){ showErr('Branch lengths are zero — check newick'); return; }
+
+    /* layout */
+    const panel = document.getElementById('tree-panel');
+    const W=panel.clientWidth, H=panel.clientHeight;
+    const cx=W/2, cy=H/2;
+    const R    = Math.min(W,H)*0.345;
+    const Ro1  = R+8,  Ro2=R+20, Ro3=R+38, Rlbl=R+52;
+
+    const svg  = d3.select('#svg');
+    const g    = svg.append('g').attr('transform',`translate(${cx},${cy})`);
+
+    const leaves=hier.leaves(), N=leaves.length;
+    const leafMeta = leaves.map(d=>sp(d.data.name));
+    document.getElementById('st-tips').textContent = N;
+    document.getElementById('st-sat').textContent = leafMeta.filter(d=>d.sat_pct).length;
+    document.getElementById('st-edta').textContent = leafMeta.filter(d=>d.te_mb).length;
+    leaves.forEach((d,i)=>{ d.theta=(i/N)*2*Math.PI-Math.PI/2; });
+    hier.eachAfter(d=>{ if(d.children) d.theta=d3.mean(d.children,c=>c.theta); });
+    hier.theta=hier.theta||0;
+
+    function rxy(d){ const r=(d.dist/maxDist)*R; return [r*Math.cos(d.theta), r*Math.sin(d.theta)]; }
+
+    /* background arcs per clade */
+    const bgG=g.append('g');
+    const byBroad=d3.group(leaves,d=>sp(d.data.name).broad||'Other');
+    byBroad.forEach((arr,broad)=>{
+      if(arr.length<2) return;
+      const thetas=arr.map(d=>d.theta).sort(d3.ascending);
+      const a0=thetas[0], a1=thetas[thetas.length-1];
+      if(a1-a0>Math.PI*1.85) return;
+      const pad=0.015;
+      bgG.append('path')
+        .attr('d', d3.arc()({innerRadius:5,outerRadius:R+55,
+          startAngle:a0+Math.PI/2-pad,endAngle:a1+Math.PI/2+pad}))
+        .attr('fill', broadBg[broad]||'#f5f5f5').attr('opacity',.6);
+    });
+
+    /* branches — proper radial elbow */
+    const brG=g.append('g');
+    hier.links().forEach(({source:s,target:t})=>{
+      const sr=(s.dist/maxDist)*R;
+      const [sx,sy]=rxy(s), [tx,ty]=rxy(t);
+      // arc end point: same radius as source, at target's angle
+      const ax=sr*Math.cos(t.theta), ay=sr*Math.sin(t.theta);
+      const dAngle=Math.abs(t.theta-s.theta);
+      const sweep=t.theta>s.theta?1:0;
+      const large=dAngle>Math.PI?1:0;
+      const col=sp(t.data.name).branch_col||'#cccccc';
+      brG.append('path').attr('fill','none').attr('stroke',col).attr('stroke-width',.65)
+        .attr('d',`M${sx},${sy} A${sr},${sr},0,${large},${sweep},${ax},${ay} L${tx},${ty}`);
+    });
+
+    /* tips */
+    const tipG=g.append('g');
+    leaves.forEach(d=>{
+      const s2=sp(d.data.name);
+      const [x,y]=rxy(d);
+      const col=s2.arch_col||'#78909C';
+      const tg=tipG.append('g').attr('transform',`translate(${x},${y})`)
+        .style('cursor','pointer').on('click',()=>showPanel(d.data.name));
+      if(s2.arch==='Holocentric'){
+        tg.append('path').attr('d',d3.symbol().type(d3.symbolTriangle).size(24)())
+          .attr('fill',col);
+      } else {
+        tg.append('circle').attr('r',3.2).attr('fill',col).attr('stroke','none');
+      }
+    });
+
+    /* ring 1: CENP-A count */
+    leaves.forEach(d=>{
+      const n=(sp(d.data.name).n_cenpa||0);
+      const x=Ro1*Math.cos(d.theta), y=Ro1*Math.sin(d.theta);
+      tipG.append('rect').attr('width',5).attr('height',5)
+        .attr('transform',`translate(${x-2.5},${y-2.5})`)
+        .attr('fill',cenpaCol[Math.min(n,4)]).attr('opacity',.96)
+        .attr('stroke','rgba(0,0,0,.28)').attr('stroke-width',.45);
+    });
+
+    function radialSegment(theta, r0, len, color, width=2.4, opacity=.82){
+      if(!len || len<=0) return;
+      tipG.append('line')
+        .attr('x1',r0*Math.cos(theta)).attr('y1',r0*Math.sin(theta))
+        .attr('x2',(r0+len)*Math.cos(theta)).attr('y2',(r0+len)*Math.sin(theta))
+        .attr('stroke',color).attr('stroke-width',width).attr('opacity',opacity);
+    }
+
+    /* ring 2: stacked genome % radial bar (satellite + TE + genes) */
+    leaves.forEach(d=>{
+      const s2=sp(d.data.name);
+      const scale=14/genomeStackMax;
+      let r=Ro2;
+      const sat=(+s2.sat_pct||0)*scale;
+      const te=(+s2.te_pct||0)*scale;
+      const gene=(+s2.gene_pct||0)*scale;
+      radialSegment(d.theta,r,sat,'#ff006e'); r+=sat;
+      radialSegment(d.theta,r,te,'#3a86ff'); r+=te;
+      radialSegment(d.theta,r,gene,'#2E7D32');
+    });
+
+    /* ring 3: monomer heatmap */
+    leaves.forEach(d=>{
+      const m=sp(d.data.name).sat_monomer;
+      const x=Ro3*Math.cos(d.theta), y=Ro3*Math.sin(d.theta);
+      tipG.append('rect').attr('width',5).attr('height',5)
+        .attr('transform',`translate(${x-2.5},${y-2.5})`)
+        .attr('fill',m?monomerScale(m):'#f0f0f0').attr('opacity',.9);
+    });
+
+    /* tip labels */
+    leaves.forEach(d=>{
+      const s2=sp(d.data.name);
+      const deg=d.theta*180/Math.PI;
+      const flip=deg>90||deg<-90;
+      const x=Rlbl*Math.cos(d.theta), y=Rlbl*Math.sin(d.theta);
+      tipG.append('text').attr('class','tlbl')
+        .attr('transform',`translate(${x},${y}) rotate(${deg+(flip?180:0)})`)
+        .attr('text-anchor',flip?'end':'start').attr('dy','0.32em')
+        .attr('font-size','8px').attr('font-style','italic')
+        .attr('fill',s2.branch_col||'#555')
+        .style('cursor','pointer')
+        .text(s2.name||d.data.name||'')
+        .on('click',()=>showPanel(d.data.name));
+    });
+
+    /* time rings */
+    const rG=g.insert('g',':first-child');
+    [100,200,300,400,500,600,700].forEach(mya=>{
+      const r=(mya/maxDist)*R; if(r>=R||r<5) return;
+      rG.append('circle').attr('r',r).attr('fill','none')
+        .attr('stroke','#ddd').attr('stroke-width',.4).attr('stroke-dasharray','2,3');
+      rG.append('text').attr('x',r+2).attr('y',-3)
+        .attr('font-size',8).attr('fill','#bbb').text(mya);
+    });
+
+    /* zoom */
+    const zoom=d3.zoom().scaleExtent([.15,20])
+      .on('zoom',e=>g.attr('transform',
+        `translate(${cx+e.transform.x},${cy+e.transform.y}) scale(${e.transform.k})`));
+    svg.call(zoom).on('dblclick.zoom',null);
+    d3.select('#zi').on('click',()=>svg.transition().duration(250).call(zoom.scaleBy,1.5));
+    d3.select('#zo').on('click',()=>svg.transition().duration(250).call(zoom.scaleBy,0.67));
+    d3.select('#zr').on('click',()=>svg.transition().duration(300)
+      .call(zoom.transform,d3.zoomIdentity.translate(cx,cy)));
+
+    /* search */
+    document.getElementById('sbox').addEventListener('input',function(){
+      const q=this.value.toLowerCase();
+      tipG.selectAll('text.tlbl').each(function(){
+        const match=q.length>1&&d3.select(this).text().toLowerCase().includes(q);
+        d3.select(this).attr('font-size',match?'10.5px':'8px')
+          .attr('font-weight',match?'700':'400');
+      });
+    });
+
+    /* ── species panel ───────────────────────────────────────────────────── */
+    function showPanel(rawName){
+      const s2=sp(rawName);
+      const panel=document.getElementById('panel');
+      if(!s2.name){ panel.innerHTML=`<div id="ph">No data for ${rawName}</div>`; return; }
+      const esc=v=>String(v ?? '').replace(/[&<>"']/g, c=>({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[c]));
+
+      const archBadge=`<span class="badge" style="background:${s2.arch_col||'#9E9E9E'}">${s2.arch||'—'}</span>`;
+      const cenBadge = s2.n_cenpa===0
+        ? '<span class="badge" style="background:#9E9E9E">Not detected</span>'
+        : `<span class="badge" style="background:${cenpaCol[Math.min(s2.n_cenpa,4)]};color:${s2.n_cenpa===1?'#3b2a00':'#fff'}">${s2.n_cenpa} paralog${s2.n_cenpa>1?'s':''}</span>`;
+
+      /* satellite family table */
+      let famHtml = '';
+      if(s2.sat_families && s2.sat_families.length){
+        famHtml = `<div class="section-title">Satellite families (top ${s2.sat_families.length})</div>
+          <table class="fam-table">
+          <tr><th>Family</th><th>Copies</th><th>Total bp</th><th>Monomer (bp)</th><th>GC%</th></tr>` +
+          s2.sat_families.map(f=>`<tr>
+            <td>${f.fam}</td><td>${f.n.toLocaleString()}</td>
+            <td>${(f.bp/1e6).toFixed(2)} Mb</td><td>${f.width}</td><td>${f.gc}</td>
+          </tr>`).join('') + '</table>';
+      }
+
+      /* CENP-A / CENH3 protein sequences */
+      let cenpaSeqHtml = '';
+      if(s2.cenpa_sequences && s2.cenpa_sequences.length){
+        cenpaSeqHtml = s2.cenpa_sequences.map((q,i)=>`
+          <details class="protein-record" ${i===0?'open':''}>
+            <summary>${esc(q.id)} · ${q.length} aa</summary>
+            <pre class="protein-seq">${esc(q.aa)}</pre>
+          </details>`).join('');
+      }
+
+      /* canonical sequence */
+      let seqHtml = '';
+      if(s2.rep_seq){
+        seqHtml = `<div class="seq-label">Canonical satellite sequence (dominant family)</div>
+          <div class="seq-box">${esc(s2.rep_seq)}</div>`;
+      }
+
+      panel.innerHTML = `
+        <div class="sp-header">
+          <h2>${s2.name}</h2>
+          <div class="sub">${s2.taxa1||''} · ${s2.broad||''}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Centromere</div>
+          <div class="row"><span class="lbl">Type</span><span class="val">${archBadge}</span></div>
+          <div class="row"><span class="lbl">CENP-A / CENH3</span><span class="val">${cenBadge}</span></div>
+          <div class="row"><span class="lbl">Centromere size</span><span class="val">${s2.cen_mb?s2.cen_mb+' Mb':'—'}</span></div>
+          <div class="row"><span class="lbl">Sat. families</span><span class="val">${s2.n_sat_fam||'—'}</span></div>
+        </div>
+
+        ${cenpaSeqHtml ? `<div class="section">
+          <div class="section-title">CENP-A / CENH3 sequences (${s2.cenpa_sequences.length})</div>
+          ${cenpaSeqHtml}
+        </div>` : ''}
+
+        <div class="section">
+          <div class="section-title">Genome</div>
+          <div class="row"><span class="lbl">Genome size</span><span class="val">${s2.genome_mb?(+s2.genome_mb).toLocaleString()+' Mb':'—'}</span></div>
+          <div class="row"><span class="lbl">Chromosome count</span><span class="val">${s2.chrs||'—'}</span></div>
+          <div class="row"><span class="lbl">GC content</span><span class="val">${s2.genome_gc?s2.genome_gc+'%':'—'}</span></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Genome annotation</div>
+          <div class="row"><span class="lbl">Satellite</span><span class="val">${s2.sat_pct?(+s2.sat_pct).toFixed(1)+'% of genome':'—'}</span></div>
+          <div class="row"><span class="lbl">Transposons</span><span class="val">${s2.te_pct?(+s2.te_pct).toFixed(1)+'% · '+(+s2.te_mb).toLocaleString()+' Mb':'—'}</span></div>
+          <div class="row"><span class="lbl">Genes</span><span class="val">${s2.gene_pct?(+s2.gene_pct).toFixed(1)+'% · '+(+s2.gene_mb).toLocaleString()+' Mb':'—'}</span></div>
+          ${(s2.sat_pct||s2.te_pct||s2.gene_pct)?`<div class="row" style="flex-direction:column;align-items:stretch">
+            <span class="lbl">Stacked genome %</span>
+            <div class="stackbar">
+              <div class="seg sat" style="width:${Math.min((+s2.sat_pct||0)/genomeStackMax*100,100)}%"></div>
+              <div class="seg te" style="width:${Math.min((+s2.te_pct||0)/genomeStackMax*100,100)}%"></div>
+              <div class="seg gene" style="width:${Math.min((+s2.gene_pct||0)/genomeStackMax*100,100)}%"></div>
+            </div>
+          </div>
+          <div class="mini-note">Magenta satellite, blue EDTA transposon, green genes. Scale capped at ${genomeStackMax}% because annotations can overlap.</div>`:''}
+        </div>
+
+        <div class="section">
+          <div class="section-title">Satellite repeats</div>
+          <div class="row"><span class="lbl">Dominant monomer</span><span class="val">${s2.sat_monomer?s2.sat_monomer+' bp':'—'}</span></div>
+          ${s2.satellite1?`<div class="row" style="flex-direction:column;gap:2px">
+            <span class="lbl">Notes</span>
+            <span class="val" style="text-align:left;font-weight:400;font-size:10.5px">${s2.satellite1}</span>
+          </div>`:''}
+        </div>
+
+        ${famHtml ? `<div class="section">${famHtml}</div>` : ''}
+        ${seqHtml ? `<div class="section">${seqHtml}</div>` : ''}
+      `;
+    }
+  });
+</script>
+</body>
+</html>
