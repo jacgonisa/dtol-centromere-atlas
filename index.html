@@ -635,12 +635,20 @@ fetch('tree_data.json')
         </div>
 
         <div class="section">
-          <div class="section-title">Satellite repeats</div>
+          <div class="section-title">Satellite repeats <span style="font-weight:400;color:#888">(dominant array)</span></div>
           <div class="row"><span class="lbl">Dominant monomer</span><span class="val">${s2.sat_monomer?s2.sat_monomer+' bp':'—'}</span></div>
+          <div class="row"><span class="lbl">Total array</span><span class="val">${s2.sat_totbp!=null?(+s2.sat_totbp/1e6).toFixed(2)+' Mb':'—'}</span></div>
+          <div class="row"><span class="lbl">Satellite GC</span><span class="val">${s2.sat_gc!=null?s2.sat_gc+'%':'—'}</span></div>
           ${s2.satellite1?`<div class="row" style="flex-direction:column;gap:2px">
             <span class="lbl">Notes</span>
             <span class="val" style="text-align:left;font-weight:400;font-size:10.5px">${s2.satellite1}</span>
           </div>`:''}
+        </div>
+
+        <div class="section">
+          <div class="section-title">Higher-order repeat structure</div>
+          <div class="row"><span class="lbl">HOR regimentation</span><span class="val">${s2.hor_regimentation!=null?s2.hor_regimentation+' / 100':(s2.arch==='Holocentric'?'n/a (holocentric)':'—')}</span></div>
+          <div class="row"><span class="lbl">HOR score</span><span class="val">${s2.hor_score!=null?s2.hor_score+'%':(s2.arch==='Holocentric'?'n/a (holocentric)':'—')}</span></div>
         </div>
 
         ${famHtml ? `<div class="section">${famHtml}</div>` : ''}
