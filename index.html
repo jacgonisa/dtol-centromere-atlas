@@ -156,11 +156,26 @@ body.resizing { cursor:col-resize; user-select:none; }
   <div id="err"></div>
   <svg id="svg"></svg>
   <div id="zc">
+    <button class="zb" id="zt" title="Toggle metric rings" style="font-size:12px">◎</button>
     <button class="zb" id="zi">+</button>
     <button class="zb" id="zo">−</button>
     <button class="zb" id="zr" style="font-size:12px">⊙</button>
   </div>
+  <div id="rtip"></div>
+  <div id="ring-legend"><b>Metric rings</b><span style="font-weight:400;color:#888"> (inner→outer)</span><div id="rl-items"></div></div>
 </div>
+<style>
+  #rtip{position:absolute;pointer-events:none;display:none;background:rgba(30,30,30,.92);color:#fff;
+    font-size:11px;padding:4px 7px;border-radius:4px;z-index:5;white-space:nowrap;}
+  #ring-legend{position:absolute;top:8px;left:8px;display:none;background:rgba(255,255,255,.94);
+    border:1px solid #ddd;border-radius:6px;padding:7px 9px;font-size:10.5px;z-index:4;max-width:150px;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  #ring-legend.on{display:block;}
+  #zt.active{background:#5c6bc0;color:#fff;border-color:#5c6bc0;}
+  #rl-items{margin-top:4px;display:flex;flex-direction:column;gap:2px;}
+  .rl-row{display:flex;align-items:center;gap:5px;}
+  .rl-sw{width:26px;height:8px;border-radius:2px;flex:0 0 auto;}
+</style>
 
 <script>
 function showErr(m){ const e=document.getElementById('err'); e.textContent=m; e.style.display='block'; }
@@ -493,12 +508,13 @@ fetch('tree_data.json?v=' + Date.now())
     });
 
     /* tip labels */
+    const labelsG = tipG.append('g').attr('id','labelsG');
     leaves.forEach(d=>{
       const s2=sp(d.data.name);
       const deg=d.theta*180/Math.PI;
       const flip=deg>90||deg<-90;
       const x=Rlbl*Math.cos(d.theta), y=Rlbl*Math.sin(d.theta);
-      tipG.append('text').attr('class','tlbl')
+      labelsG.append('text').attr('class','tlbl')
         .attr('transform',`translate(${x},${y}) rotate(${deg+(flip?180:0)})`)
         .attr('text-anchor',flip?'end':'start').attr('dy','0.32em')
         .attr('font-size','8px').attr('font-style','italic')
@@ -507,6 +523,48 @@ fetch('tree_data.json?v=' + Date.now())
         .text(s2.name||d.data.name||'')
         .on('click',()=>showPanel(d.data.name));
     });
+
+    /* metric rings (toggle with ◎) — parity with the static ringed figure */
+    const metricG = g.append('g').attr('id','metricRings').style('display','none');
+    const ringDefs = [
+      {key:'hor_regimentation', label:'HOR regimentation', interp:d3.interpolateReds,    dom:[0,100]},
+      {key:'hor_score',         label:'HOR score',          interp:d3.interpolateGreens,  dom:[0,100]},
+      {key:'sat_totbp',         label:'Satellite total (bp)', interp:d3.interpolateBlues,  log:true},
+      {key:'sat_monomer',       label:'Monomer length (bp)',  interp:d3.interpolatePurples, log:true},
+      {key:'genome_gc',         label:'Genome GC %',        interp:d3.interpolateYlOrBr,  dom:[20,60]},
+      {key:'chrs',              label:'Chromosome number',  interp:d3.interpolateBuGn},
+      {key:'genome_mb',         label:'Genome size (Mb)',   interp:d3.interpolatePuRd,    log:true},
+    ];
+    const GREY='#e0e0e0';
+    ringDefs.forEach(def=>{
+      const vals=leaves.map(d=>+sp(d.data.name)[def.key]).filter(v=>Number.isFinite(v)&&(!def.log||v>0));
+      let dom=def.dom||[d3.min(vals),d3.max(vals)];
+      if(def.log) dom=[Math.log10(dom[0]),Math.log10(dom[1])];
+      const sc=d3.scaleSequential(dom,def.interp);
+      def.color=v=>{v=+v; if(!Number.isFinite(v)||(def.log&&v<=0)) return GREY; return sc(def.log?Math.log10(v):v);};
+    });
+    const RING0=R+56, RINGW=9, cellH=RINGW-1.5;
+    const rtip=document.getElementById('rtip'), tpanel=document.getElementById('tree-panel');
+    ringDefs.forEach((def,ri)=>{
+      const r0=RING0+ri*RINGW;
+      leaves.forEach(d=>{
+        const s2=sp(d.data.name), v=s2[def.key];
+        const x=r0*Math.cos(d.theta), y=r0*Math.sin(d.theta);
+        metricG.append('rect').attr('width',6).attr('height',cellH)
+          .attr('transform',`translate(${x-3},${y-cellH/2}) rotate(${d.theta*180/Math.PI},3,${cellH/2})`)
+          .attr('fill',def.color(v)).attr('opacity',.95).style('cursor','pointer')
+          .on('mouseover',()=>{ rtip.style.display='block';
+            rtip.innerHTML=`<b>${s2.name||d.data.name}</b><br>${def.label}: ${(v==null||v===undefined)?'—':v}`; })
+          .on('mousemove',(e)=>{ const p=tpanel.getBoundingClientRect();
+            rtip.style.left=(e.clientX-p.left+12)+'px'; rtip.style.top=(e.clientY-p.top+12)+'px'; })
+          .on('mouseout',()=>{ rtip.style.display='none'; })
+          .on('click',()=>showPanel(d.data.name));
+      });
+    });
+    document.getElementById('rl-items').innerHTML = ringDefs.map(def=>{
+      const sw=[0,.5,1].map(t=>def.interp(t)).join(',');
+      return `<div class="rl-row"><span class="rl-sw" style="background:linear-gradient(90deg,${sw})"></span>${def.label}</div>`;
+    }).join('');
 
     /* time rings: branch lengths are MYA from root to present */
     const rG=g.insert('g',':first-child');
@@ -536,6 +594,16 @@ fetch('tree_data.json?v=' + Date.now())
     d3.select('#zo').on('click',()=>svg.transition().duration(250).call(zoom.scaleBy,0.67));
     d3.select('#zr').on('click',()=>svg.transition().duration(300)
       .call(zoom.transform,d3.zoomIdentity.translate(cx,cy)));
+
+    /* metric-ring toggle: show the 7 heat-rings, hide the (cluttered) tip labels */
+    let ringsOn=false;
+    d3.select('#zt').on('click',()=>{
+      ringsOn=!ringsOn;
+      metricG.style('display',ringsOn?'inline':'none');
+      labelsG.style('display',ringsOn?'none':'inline');
+      document.getElementById('zt').classList.toggle('active',ringsOn);
+      document.getElementById('ring-legend').classList.toggle('on',ringsOn);
+    });
 
     /* search */
     document.getElementById('sbox').addEventListener('input',function(){
