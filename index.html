@@ -104,6 +104,24 @@ body.resizing { cursor:col-resize; user-select:none; }
   cursor:pointer; font-size:17px; display:flex; align-items:center; justify-content:center;
   color:#444; box-shadow:0 1px 3px rgba(0,0,0,.1); }
 .zb:hover { background:#e8eaf6; }
+/* Genome assemblies & ToLIDs panel */
+#asm-open{margin:0 10px 8px;padding:6px 8px;font-size:11px;cursor:pointer;background:#e8eaf6;border:1px solid #9fa8da;border-radius:5px;color:#1a237e;width:calc(100% - 20px);font-weight:600}
+#asm-open:hover{background:#d7dbf0}
+#asm-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:1000;align-items:center;justify-content:center}
+#asm-modal.open{display:flex}
+#asm-box{background:#fff;width:min(880px,93vw);height:min(82vh,780px);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+#asm-hd{padding:11px 16px;background:#1a237e;color:#fff;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#asm-hd h2{font-size:15px;margin:0;flex:1 1 auto}
+#asm-hd input{flex:0 0 230px;padding:5px 8px;border:none;border-radius:4px;font-size:12px}
+#asm-hd button{background:#fff;color:#1a237e;border:none;border-radius:4px;padding:5px 9px;font-size:12px;cursor:pointer;font-weight:600}
+#asm-count{font-size:11px;color:#c5cae9;flex:0 0 auto}
+#asm-tblwrap{overflow:auto;flex:1}
+#asm-tbl{border-collapse:collapse;width:100%;font-size:12px}
+#asm-tbl th{position:sticky;top:0;background:#e8eaf6;text-align:left;padding:6px 10px;border-bottom:2px solid #9fa8da;cursor:pointer;white-space:nowrap}
+#asm-tbl th:hover{background:#d7dbf0}
+#asm-tbl td{padding:4px 10px;border-bottom:1px solid #eee}
+#asm-tbl tr:hover td{background:#f5f6ff}
+#asm-tbl .mono{font-family:ui-monospace,Menlo,monospace;color:#222}
 </style>
 </head>
 <body>
@@ -126,6 +144,7 @@ body.resizing { cursor:col-resize; user-select:none; }
     </div>
   </div>
   <div id="swrap"><input id="sbox" type="text" placeholder="Search species…"></div>
+  <button id="asm-open" title="Browse genome assemblies and ToLIDs">⊞ Genome assemblies &amp; ToLIDs</button>
   <div id="leg">
     <div class="lh">Centromere type</div>
     <div class="li"><div class="dot" style="background:#ff006e"></div>Satellite</div>
@@ -722,6 +741,74 @@ fetch('tree_data.json?v=' + Date.now())
       `;
     }
   });
+
+/* ── Genome assemblies & ToLIDs searchable panel ───────────────────────────── */
+(function assembliesPanel(){
+  const modal=document.getElementById('asm-modal');
+  document.getElementById('asm-open').addEventListener('click',()=>modal.classList.add('open'));
+  document.getElementById('asm-close').addEventListener('click',()=>modal.classList.remove('open'));
+  modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('open'); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') modal.classList.remove('open'); });
+
+  fetch('tree_data.json?v=' + Date.now()).then(r=>r.json()).then(data=>{
+    const SP=data.species||{};
+    const tips=[...data.newick.matchAll(/[\(,]([^(),:]+):/g)].map(m=>m[1]);
+    const rows=tips.map(t=>{ const s=SP[t.replace(/\.fa$/i,'').toLowerCase()]||{};
+      return {tolid:t, species:s.name||'', clade:s.taxa1||'', broad:s.broad||'', mb:(s.genome_mb==null?'':s.genome_mb)}; });
+
+    const tbody=document.getElementById('asm-tbody'),
+          search=document.getElementById('asm-search'),
+          count=document.getElementById('asm-count');
+    let sortK='broad', asc=true;
+    function sorted(r){ return r.slice().sort((a,b)=>{
+      if(sortK==='mb'){ return asc?(+a.mb||0)-(+b.mb||0):(+b.mb||0)-(+a.mb||0); }
+      const x=String(a[sortK]), y=String(b[sortK]);
+      return asc? x.localeCompare(y) : y.localeCompare(x); }); }
+    function render(){
+      const q=search.value.trim().toLowerCase();
+      let r=rows.filter(o=>!q || (o.tolid+' '+o.species+' '+o.clade+' '+o.broad).toLowerCase().includes(q));
+      r=sorted(r);
+      tbody.innerHTML=r.map(o=>`<tr><td class="mono">${o.tolid}</td><td><i>${o.species}</i></td><td>${o.clade}</td><td>${o.broad}</td><td>${o.mb}</td></tr>`).join('');
+      count.textContent=r.length+' / '+rows.length+' assemblies';
+    }
+    search.addEventListener('input',render);
+    document.querySelectorAll('#asm-tbl th').forEach(th=>th.addEventListener('click',()=>{
+      const k=th.dataset.k; if(k===sortK) asc=!asc; else { sortK=k; asc=true; } render(); }));
+    document.getElementById('asm-dl').addEventListener('click',()=>{
+      const r=sorted(rows);
+      const tsv='assembly_tolid\tspecies\tclade\tgroup\tgenome_mb\n'+
+        r.map(o=>[o.tolid,o.species,o.clade,o.broad,o.mb].join('\t')).join('\n');
+      const b=new Blob([tsv],{type:'text/tab-separated-values'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+      a.download='dtol_assemblies_tolids.tsv'; a.click(); URL.revokeObjectURL(a.href);
+    });
+    render();
+  }).catch(()=>{ document.getElementById('asm-count').textContent='failed to load'; });
+})();
 </script>
+
+<div id="asm-modal">
+  <div id="asm-box">
+    <div id="asm-hd">
+      <h2>Genome assemblies &amp; ToLIDs</h2>
+      <span id="asm-count"></span>
+      <input id="asm-search" type="text" placeholder="Filter species / ToLID / clade…">
+      <button id="asm-dl" title="Download as TSV">⬇ TSV</button>
+      <button id="asm-close" title="Close">✕</button>
+    </div>
+    <div id="asm-tblwrap">
+      <table id="asm-tbl">
+        <thead><tr>
+          <th data-k="tolid">Assembly / ToLID</th>
+          <th data-k="species">Species</th>
+          <th data-k="clade">Clade</th>
+          <th data-k="broad">Group</th>
+          <th data-k="mb">Genome (Mb)</th>
+        </tr></thead>
+        <tbody id="asm-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 </body>
 </html>
