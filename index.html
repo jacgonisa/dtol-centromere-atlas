@@ -104,6 +104,14 @@ body.resizing { cursor:col-resize; user-select:none; }
   cursor:pointer; font-size:17px; display:flex; align-items:center; justify-content:center;
   color:#444; box-shadow:0 1px 3px rgba(0,0,0,.1); }
 .zb:hover { background:#e8eaf6; }
+#rotwrap { position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+  background:rgba(255,255,255,.93); border:1px solid #d7dbf0; border-radius:20px;
+  padding:6px 14px; display:flex; align-items:center; gap:9px; z-index:6;
+  box-shadow:0 2px 10px rgba(0,0,0,.14); font-size:11px; color:#555; }
+#rotwrap .rlbl { font-weight:700; color:#1a237e; }
+#rotwrap input[type=range] { width:190px; accent-color:#3949ab; cursor:pointer; }
+#rotwrap #zrval { font-variant-numeric:tabular-nums; color:#1a237e; font-weight:600; min-width:34px; text-align:right; }
+#rotwrap .zb { position:static; width:24px; height:24px; }
 </style>
 </head>
 <body>
@@ -161,6 +169,13 @@ body.resizing { cursor:col-resize; user-select:none; }
     <button class="zb" id="zi">+</button>
     <button class="zb" id="zo">−</button>
     <button class="zb" id="zr" style="font-size:12px">⊙</button>
+  </div>
+  <div id="rotwrap">
+    <span class="rlbl">⟳ Rotate</span>
+    <button class="zb" id="zrl" style="font-size:13px" title="Rotate 15° counter-clockwise">↺</button>
+    <input id="zrot" type="range" min="0" max="360" value="0" step="1" title="Rotate the tree">
+    <button class="zb" id="zrr" style="font-size:13px" title="Rotate 15° clockwise">↻</button>
+    <span id="zrval">0°</span>
   </div>
   <div id="rtip"></div>
   <div id="ring-legend"><b>Metric rings</b><span style="font-weight:400;color:#888"> (inner→outer)</span><div id="rl-items"></div></div>
@@ -520,6 +535,7 @@ fetch('tree_data.json?v=' + Date.now())
       const asmName=(d.data.name||'').replace(/\.fa$/i,'');
       labelsG.append('text').attr('class','tlbl')
         .attr('data-sp',spName).attr('data-asm',asmName)
+        .attr('data-deg',deg).attr('data-x',x).attr('data-y',y)
         .attr('transform',`translate(${x},${y}) rotate(${deg+(flip?180:0)})`)
         .attr('text-anchor',flip?'end':'start').attr('dy','0.32em')
         .attr('font-size','8px').attr('font-style','italic')
@@ -597,15 +613,35 @@ fetch('tree_data.json?v=' + Date.now())
       .attr('font-size',8).attr('fill','#777').attr('text-anchor','end')
       .text(`root ${Math.round(maxDist)} MYA`);
 
-    /* zoom */
+    /* zoom + rotation */
+    let rotation=0;
+    function applyTransform(t){ g.attr('transform',
+      `translate(${cx+t.x},${cy+t.y}) scale(${t.k}) rotate(${rotation})`); }
     const zoom=d3.zoom().scaleExtent([.15,20])
-      .on('zoom',e=>g.attr('transform',
-        `translate(${cx+e.transform.x},${cy+e.transform.y}) scale(${e.transform.k})`));
+      .on('zoom',e=>applyTransform(e.transform));
     svg.call(zoom).on('dblclick.zoom',null);
     d3.select('#zi').on('click',()=>svg.transition().duration(250).call(zoom.scaleBy,1.5));
     d3.select('#zo').on('click',()=>svg.transition().duration(250).call(zoom.scaleBy,0.67));
-    d3.select('#zr').on('click',()=>svg.transition().duration(300)
-      .call(zoom.transform,d3.zoomIdentity.translate(cx,cy)));
+    d3.select('#zr').on('click',()=>{ setRot(0);
+      svg.transition().duration(300).call(zoom.transform,d3.zoomIdentity.translate(cx,cy)); });
+
+    /* spin the tree, keeping every tip label upright & readable */
+    function uprightLabels(){
+      labelsG.selectAll('text.tlbl').each(function(){
+        const deg=+this.dataset.deg, x=+this.dataset.x, y=+this.dataset.y;
+        const eff=((deg+rotation)%360+360)%360;
+        const flip = eff>90 && eff<270;
+        d3.select(this).attr('transform',`translate(${x},${y}) rotate(${deg+(flip?180:0)})`)
+          .attr('text-anchor',flip?'end':'start');
+      });
+    }
+    function setRot(r){ rotation=((r%360)+360)%360;
+      document.getElementById('zrot').value=rotation;
+      document.getElementById('zrval').textContent=Math.round(rotation)+'°';
+      applyTransform(d3.zoomTransform(svg.node())); uprightLabels(); }
+    document.getElementById('zrot').addEventListener('input',e=>setRot(+e.target.value));
+    document.getElementById('zrl').addEventListener('click',()=>setRot(rotation-15));
+    document.getElementById('zrr').addEventListener('click',()=>setRot(rotation+15));
 
     /* metric-ring toggle: show the 7 heat-rings, hide the (cluttered) tip labels */
     let ringsOn=false;
