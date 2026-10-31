@@ -452,6 +452,16 @@ fetch('tree_data.json?v=' + Date.now())
         .attr('fill', broadBg[broad]||'#f5f5f5').attr('opacity',.6);
     });
 
+    /* clade colour for each node: a branch is coloured by its clade only when its
+       whole subtree is one clade (pure-descendant colouring); deep backbone
+       branches that span clades are a neutral grey. */
+    const BACKBONE='#c9ccd1';
+    hier.eachAfter(d=>{
+      if(!d.children||!d.children.length){ d._bcol=sp(d.data.name).branch_col||BACKBONE; }
+      else { const cols=new Set(d.children.map(c=>c._bcol));
+             d._bcol = cols.size===1 ? [...cols][0] : BACKBONE; }
+    });
+
     /* branches — proper radial elbow */
     const brG=g.append('g');
     hier.links().forEach(({source:s,target:t})=>{
@@ -462,8 +472,10 @@ fetch('tree_data.json?v=' + Date.now())
       const dAngle=Math.abs(t.theta-s.theta);
       const sweep=t.theta>s.theta?1:0;
       const large=dAngle>Math.PI?1:0;
-      const col=sp(t.data.name).branch_col||'#cccccc';
-      brG.append('path').attr('fill','none').attr('stroke',col).attr('stroke-width',.65)
+      const col=t._bcol||BACKBONE;
+      const backbone=(col===BACKBONE);
+      brG.append('path').attr('fill','none').attr('stroke',col)
+        .attr('stroke-width',backbone?.5:.8).attr('stroke-opacity',backbone?.75:1)
         .attr('d',`M${sx},${sy} A${sr},${sr},0,${large},${sweep},${ax},${ay} L${tx},${ty}`);
     });
 
