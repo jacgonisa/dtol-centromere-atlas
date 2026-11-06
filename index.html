@@ -34,6 +34,7 @@ body.resizing { cursor:col-resize; user-select:none; }
 #swrap  { padding:8px 12px; flex-shrink:0; }
 #sbox   { width:100%; padding:6px 10px; border:1px solid #bdbdbd; border-radius:20px; font-size:12px; outline:none; }
 #sbox:focus { border-color:#3949ab; }
+#scount { font-size:10px; color:#777; min-height:12px; padding:2px 10px 0; }
 
 #leg { padding:6px 12px 8px; border-top:1px solid #eee; flex-shrink:0; font-size:11px;
   height:230px; min-height:38px; max-height:58vh; overflow:auto; resize:vertical; }
@@ -133,7 +134,7 @@ body.resizing { cursor:col-resize; user-select:none; }
       <a href="index.html?view=fungi" data-view="fungi">Fungi</a>
     </div>
   </div>
-  <div id="swrap"><input id="sbox" type="text" placeholder="Search species…"></div>
+  <div id="swrap"><input id="sbox" type="text" placeholder="Search species or ToLID…"><div id="scount"></div></div>
   <div id="leg">
     <div class="lh">Centromere type</div>
     <div class="li"><div class="dot" style="background:#ff006e"></div>Satellite</div>
@@ -546,7 +547,7 @@ fetch('tree_data.json?v=' + Date.now())
       const spName=s2.name||d.data.name||'';
       const asmName=(d.data.name||'').replace(/\.fa$/i,'');
       labelsG.append('text').attr('class','tlbl')
-        .attr('data-sp',spName).attr('data-asm',asmName)
+        .attr('data-sp',spName).attr('data-asm',asmName).attr('data-raw',d.data.name)
         .attr('data-deg',deg).attr('data-x',x).attr('data-y',y)
         .attr('transform',`translate(${x},${y}) rotate(${deg+(flip?180:0)})`)
         .attr('text-anchor',flip?'end':'start').attr('dy','0.32em')
@@ -665,19 +666,44 @@ fetch('tree_data.json?v=' + Date.now())
       document.getElementById('ring-legend').classList.toggle('on',ringsOn);
     });
 
-    /* search */
-    document.getElementById('sbox').addEventListener('input',function(){
-      const q=this.value.toLowerCase();
-      tipG.selectAll('text.tlbl').each(function(){
-        const match=q.length>1&&d3.select(this).text().toLowerCase().includes(q);
+    /* search — matches species name OR assembly/ToLID; Enter opens the first hit */
+    const sbox=document.getElementById('sbox');
+    let firstHit=null;
+    function runSearch(q){
+      q=(q||'').trim().toLowerCase(); firstHit=null; let n=0;
+      labelsG.selectAll('text.tlbl').each(function(){
+        const hay=(this.getAttribute('data-sp')+' '+this.getAttribute('data-asm')).toLowerCase();
+        const match=q.length>1&&hay.includes(q);
+        if(match){ n++; if(!firstHit) firstHit=this.getAttribute('data-raw'); }
         d3.select(this).attr('font-size',match?'10.5px':'8px')
           .attr('font-weight',match?'700':'400');
       });
-    });
+      document.getElementById('scount').textContent = q.length>1 ? (n? n+' match'+(n>1?'es':'')+(n?' — Enter to open':'') : 'no match') : '';
+    }
+    sbox.addEventListener('input',function(){ runSearch(this.value); });
+    sbox.addEventListener('keydown',e=>{ if(e.key==='Enter'&&firstHit) showPanel(firstHit); });
+
+    /* deep link: ?species=<ToLID | assembly | species name> */
+    setTimeout(()=>{
+      const want=(new URLSearchParams(location.search).get('species')||'').trim().toLowerCase().replace(/\.fa$/,'').replace(/_/g,' ');
+      if(!want) return;
+      let hit=null;
+      labelsG.selectAll('text.tlbl').each(function(){
+        if(hit) return;
+        const asm=this.getAttribute('data-asm').toLowerCase(), nm=this.getAttribute('data-sp').toLowerCase();
+        if(asm===want||nm===want||asm.split('.')[0]===want) hit=this;
+      });
+      if(!hit){ showErr('Species not found: '+want); return; }
+      showPanel(hit.getAttribute('data-raw'));
+      d3.select(hit).attr('font-size','11px').attr('font-weight','700');
+    },0);
 
     /* ── species panel ───────────────────────────────────────────────────── */
     function showPanel(rawName){
       const s2=sp(rawName);
+      if(s2.name){ const u=new URL(location.href);
+        u.searchParams.set('species',(rawName||'').replace(/\.fa$/i,''));
+        history.replaceState(null,'',u); }
       const panel=document.getElementById('panel');
       if(!s2.name){ panel.innerHTML=`<div id="ph">No data for ${rawName}</div>`; return; }
       const esc=v=>String(v ?? '').replace(/[&<>"']/g, c=>({
