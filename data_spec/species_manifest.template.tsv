@@ -1,0 +1,4 @@
+species_id	scientific_name	ncbi_taxid	assembly_accession	taxa1	broad	proteome_uri	proteome_md5	annotation_method	include_in_tree	notes
+fTauBub2.1	Taurulus bubalis	61643	GCA_910589615.1	Actinopterygii	Vertebrates	s3://BUCKET/proteomes/fTauBub2.1.faa	MD5	helixer	yes	
+drHerSpho1.hap1.1	Heracleum sphondylium	40919	GCA_965233475.1	Dicots	Viridiplantae	s3://BUCKET/proteomes/drHerSpho1.hap1.1.faa	MD5	helixer	yes	formerly mislabelled as ddHotPalu2 (Hottonia palustris) in the master table
+pEimTen1.1	Eimeria tenella	5802	GCA_905310635.1	Alveolata	Protists	s3://BUCKET/proteomes/pEimTen1.1.faa	MD5	helixer	yes	outgroup used to root the tree

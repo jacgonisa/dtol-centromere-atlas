@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jacgonisa.github.io/dtol-centromere-atlas/data_spec/tree_data.schema.json",
+  "title": "DToL Centromere Atlas tree_data.json (v1)",
+  "description": "See DATA_SPEC.md. Species keys = newick tip label, lower-cased, trailing .fa removed. Cross-file checks (tips <-> keys) are done by validate_tree_data.py.",
+  "type": "object",
+  "required": [
+    "newick",
+    "species"
+  ],
+  "properties": {
+    "newick": {
+      "type": "string",
+      "pattern": "^\\(.*\\);?$",
+      "description": "Time-calibrated tree, branch lengths in millions of years"
+    },
+    "species": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z0-9._-]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/species"
+      }
+    }
+  },
+  "$defs": {
+    "species": {
+      "type": "object",
+      "required": [
+        "name",
+        "taxa1",
+        "broad",
+        "branch_col",
+        "arch",
+        "arch_col",
+        "genome_mb",
+        "chrs",
+        "genome_gc"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Scientific name"
+        },
+        "taxa1": {
+          "type": "string",
+          "description": "Display subgroup, e.g. Actinopterygii, Dicots, Coleoptera"
+        },
+        "broad": {
+          "enum": [
+            "Vertebrates",
+            "Invertebrates",
+            "Viridiplantae",
+            "Fungi",
+            "Protists"
+          ]
+        },
+        "branch_col": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Derived from broad (see DATA_SPEC \u00a73a)"
+        },
+        "arch": {
+          "enum": [
+            "Satellite",
+            "Transposon",
+            "Satellite/transposon",
+            "Holocentric",
+            "Monocentric sequence unknown",
+            "Unknown"
+          ]
+        },
+        "arch_col": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "Derived from arch"
+        },
+        "n_cenpa": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Number of CENP-A/CENH3 paralogues"
+        },
+        "cenpa_sequences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "aa",
+              "length"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "aa": {
+                "type": "string",
+                "pattern": "^[A-Za-z*]+$"
+              },
+              "length": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "satellite1": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Free-text curator note"
+        },
+        "sat_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "% of genome in centromeric satellite"
+        },
+        "cen_mb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Centromere size, Mb"
+        },
+        "n_sat_fam": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Number of centromeric satellite families"
+        },
+        "sat_families": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fam",
+              "n",
+              "bp",
+              "width",
+              "gc"
+            ],
+            "properties": {
+              "fam": {
+                "type": "string"
+              },
+              "n": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bp": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "gc": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        },
+        "rep_seq": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Representative monomer (DNA) of dominant family"
+        },
+        "sat_monomer": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Dominant satellite monomer length, bp"
+        },
+        "sat_totbp": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Dominant satellite total array bp"
+        },
+        "sat_gc": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Dominant satellite GC %, 0-100"
+        },
+        "hor_regimentation": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "HOR regimentation 0-100; null for Holocentric"
+        },
+        "hor_score": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "HOR score, %; null for Holocentric"
+        },
+        "genome_mb": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Genome size, Mb"
+        },
+        "chrs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "genome_gc": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "te_mb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Transposon content, Mb"
+        },
+        "te_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Transposon % of genome"
+        },
+        "gene_mb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Gene content, Mb"
+        },
+        "gene_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Gene % of genome"
+        },
+        "trash_mb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "All TRASH satellites, Mb (not shown in app)"
+        },
+        "trash_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "All TRASH satellites % (not shown)"
+        },
+        "stack_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "~te+gene+trash % (not shown)"
+        }
+      }
+    }
+  }
+}
