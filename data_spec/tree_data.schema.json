@@ -23,6 +23,33 @@
       "additionalProperties": {
         "$ref": "#/$defs/species"
       }
+    },
+    "meta": {
+      "type": "object",
+      "description": "Tree provenance; ignored by the app. While frozen, md5(newick) must equal newick_md5 (checked by validate_tree_data.py).",
+      "required": [
+        "tree_version",
+        "frozen",
+        "newick_md5"
+      ],
+      "properties": {
+        "tree_version": {
+          "type": "string"
+        },
+        "frozen": {
+          "type": "boolean"
+        },
+        "newick_md5": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "tree": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string"
+        }
+      }
     }
   },
   "$defs": {

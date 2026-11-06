@@ -13,6 +13,7 @@ Files in this folder:
 | `DATA_SPEC.md` | this document |
 | `tree_data.schema.json` | JSON Schema (draft 2020-12) for `tree_data.json`. Validate with any validator, e.g. `check-jsonschema --schemafile tree_data.schema.json tree_data.json` |
 | `species_manifest.template.tsv` | the per-species input table (one row per species) with 3 real example rows |
+| `frozen/` | the frozen paper tree (`paper_325sp_v1.nwk`) and `FROZEN.md` (provenance, md5s, how to deploy a new tree) |
 | `validate_tree_data.py` | standard-library-only checker: schema-level checks **plus** newick ↔ species-key consistency. `python3 validate_tree_data.py ../tree_data.json` |
 
 ---
@@ -81,15 +82,15 @@ What the 325-species paper tree used:
 Post-processing, in order:
 
 1. **Strip the extension** from tip labels (`.faa`, or legacy `_helixer.pep` / `.fa` / `.fasta`).
-2. **Root.** The current tree is rooted with Alveolata (`pEimTen1.1`, `pxEimPrae1.1`) as the outgroup. The placement of Alveolata/Excavata is a known soft spot, accepted for the paper.
-3. **Time-calibrate.** The atlas uses `ape::chronos(model = "correlated", lambda = 0.1)` with the 64-point calibration set (`over_calib.tsv`). Calibration points are defined as the MRCA of named tip pairs, so they survive adding species. A **new clade with no calibration point is only interpolated**, so add calibration points when a new lineage arrives. The branch lengths in `newick` are in **millions of years**.
+2. **Root.** The paper tree is **midpoint-rooted** (`phytools::midpoint.root`, then `ape::multi2di`); there is no explicit outgroup. On the 325-species tree the midpoint happens to fall between the two *Eimeria* (Alveolata) and everything else. Adding species can move a midpoint root, so **a new tree should state its rooting explicitly**, e.g. a named outgroup set, and the choice should be agreed with Jacob. The placement of Alveolata/Excavata is a known soft spot, accepted for the paper.
+3. **Time-calibrate.** The atlas uses `ape::chronos(model = "correlated", lambda = 0.1)` with the 62-constraint calibration set (`01_species_tree/over_calib.tsv`; root = Eukaryota 1085–1671 Ma). Generator: `01_species_tree/calibrate_chronos_correlated_325sp.R <constraints.tsv> <out.nwk>`. Its λ is hard-coded to 1, and the paper tree used λ = 0.1, so expose λ as an argument before automating this. Calibration points are defined as the MRCA of named tip pairs, so they survive adding species. A **new clade with no calibration point is only interpolated**, so add calibration points when a new lineage arrives. The branch lengths in `newick` are in **millions of years**.
 4. **Write `tree_data.json`** (§3) and run `validate_tree_data.py`.
 
 Important caveats for automating this:
 
 - **Adding species is a full rebuild, not an incremental insert.** FastSpeciesTree re-selects genes and re-infers everything. Its pseudo-alignment step is cheap enough that this is the intended mode, but **topology can shift**, so node-level results are tied to one tree version.
-- **The paper tree is frozen.** All paper analyses (ASR, Pagel's λ, calibration QC) refer to the 325-species tree. Expanded trees should carry a new `tree_version` and leave that one untouched.
-- The original chronos generator script for the 64-point calibration was lost from `/tmp`. Only the outputs and `over_calib.tsv` survive. **It has to be rewritten as a committed script before calibration can be automated.**
+- **The paper tree is frozen** (`frozen/paper_325sp_v1.nwk`, see `frozen/FROZEN.md`) until a new tree is deliberately deployed, in some months. All paper analyses (ASR, Pagel's λ, calibration QC) refer to it. Until then, generators must **copy `newick` and `meta` from the frozen tree unchanged** and only regenerate `species` records. `build_atlas_data.py` refuses to run if the frozen tree's md5 changes, and `validate_tree_data.py` checks it too.
+- A new tree gets a new `tree_version` and a new file in `frozen/`; the paper file is never edited.
 
 ---
 
@@ -97,6 +98,9 @@ Important caveats for automating this:
 
 ```jsonc
 {
+  "meta":    { "tree_version": "paper_325sp_v1", "frozen": true,
+               "newick_md5": "4b403fa34ad997413d975c9b93d1517b",   // md5 of the newick string
+               "tree": "FastSpeciesTree … midpoint-rooted … chronos λ=0.1 …", "schema": "…" },
   "newick":  "((pEimTen1.1.fa:737.30,pxEimPrae1.1.fa:737.30):737.30, ... );",
   "species": {
     "ftaubub2.1": { "name": "Taurulus bubalis", "taxa1": "Actinopterygii", ... },
@@ -104,6 +108,8 @@ Important caveats for automating this:
   }
 }
 ```
+
+`meta` is ignored by the app. It records which frozen tree the file was built on. While a tree is frozen, `md5(newick)` must equal `meta.newick_md5`.
 
 **Join rule (exact JS used by the app):**
 

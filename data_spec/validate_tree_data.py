@@ -9,10 +9,11 @@ Checks
     (tip.lower() with a trailing ".fa" removed) and every key is a tip
   * required fields, types, enums, ranges and colour consistency (see DATA_SPEC.md §3)
   * n_cenpa == len(cenpa_sequences), cenpa length == len(aa), holocentric => no HOR values
+  * frozen tree: md5(newick) == meta.newick_md5 (paper tree = 4b403fa34ad997413d975c9b93d1517b)
   * optional: every tip is a species_id in the manifest (include_in_tree == yes)
 Exit code 0 = valid (warnings allowed), 1 = errors found.
 """
-import csv, json, re, sys
+import csv, hashlib, json, re, sys
 
 BROAD_COL = {"Vertebrates": "#1565C0", "Invertebrates": "#EF6C00", "Viridiplantae": "#2E7D32",
              "Fungi": "#6A1B9A", "Protists": "#C62828"}
@@ -49,6 +50,12 @@ def main(argv):
     if not isinstance(D.get("newick"), str) or not isinstance(D.get("species"), dict):
         print("ERROR: need {'newick': str, 'species': object}"); return 1
     S = D["species"]
+    meta = D.get("meta")
+    if not isinstance(meta, dict): W("no 'meta' block: cannot verify which frozen tree this was built on")
+    else:
+        md5 = hashlib.md5(D["newick"].strip().encode()).hexdigest()
+        if meta.get("frozen") and md5 != meta.get("newick_md5"):
+            E(f"newick md5 {md5} != meta.newick_md5 {meta.get('newick_md5')} (tree '{meta.get('tree_version')}' is frozen)")
     tips = tip_names(D["newick"])
     keys = [key_of(t) for t in tips]
     dup = {k for k in keys if keys.count(k) > 1}
