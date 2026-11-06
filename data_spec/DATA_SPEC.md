@@ -13,6 +13,7 @@ Files in this folder:
 | `DATA_SPEC.md` | this document |
 | `tree_data.schema.json` | JSON Schema (draft 2020-12) for `tree_data.json`. Validate with any validator, e.g. `check-jsonschema --schemafile tree_data.schema.json tree_data.json` |
 | `species_manifest.template.tsv` | the per-species input table (one row per species) with 3 real example rows |
+| `tsv/` | **the fill-in template:** `species.tsv`, `cenpa_sequences.tsv`, `sat_families.tsv` (pre-filled with the 325 species), `fields.tsv` (column dictionary), `tsv_to_json.py` (converter). Start here. |
 | `frozen/` | the frozen paper tree (`paper_325sp_v1.nwk`) and `FROZEN.md` (provenance, md5s, how to deploy a new tree) |
 | `validate_tree_data.py` | standard-library-only checker: schema-level checks **plus** newick ↔ species-key consistency. `python3 validate_tree_data.py ../tree_data.json` |
 

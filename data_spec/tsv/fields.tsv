@@ -1,0 +1,36 @@
+table	column	type	required	unit_or_values	description	source_in_current_build
+species	species_id	string	yes	ToLID + assembly version, exact case, e.g. fTauBub2.1; must equal a tree tip (tip minus .fa)	primary key, joins all three tables	tree tip label
+species	name	string	yes	binomial	scientific name shown on the tree and dossier	species table / manifest
+species	taxa1	string	yes	e.g. Actinopterygii, Aves, Dicots, Monocots, Coleoptera, Fungi (36 values in use)	display subgroup	master taxa1
+species	broad	enum	yes	Vertebrates | Invertebrates | Viridiplantae | Fungi | Protists	clade colour + view filters; branch_col is derived from it	species table
+species	arch	enum	yes	Satellite | Transposon | Satellite/transposon | Holocentric | Monocentric sequence unknown | Unknown	centromere architecture; arch_col is derived from it	master classification
+species	genome_mb	float	yes	Mb, 1 decimal	assembly size	master genome.bp / 1e6
+species	chrs	int	yes	count	chromosome count	master chrs
+species	genome_gc	float	yes	%, 0-100, 2 decimals	genome GC	master genome.gc
+species	n_cenpa	int	no	count >= 0	number of CENP-A/CENH3 paralogues; should equal its row count in cenpa_sequences.tsv	CENP-A copy-number table
+species	satellite1	string	no	free text	curator note on the centromere call	master satellite1
+species	sat_pct	float	no	% of genome	centromeric satellite share of genome	centromere-length table
+species	cen_mb	float	no	Mb	centromere size	centromere-length table
+species	n_sat_fam	int	no	count	number of centromeric satellite families	centromere satellite table
+species	rep_seq	string	no	DNA	representative monomer of the dominant satellite family	TRASH
+species	sat_monomer	int	no	bp	dominant satellite monomer length	dtol.sat.dat.csv width
+species	sat_totbp	int	no	bp	dominant satellite total array size	dtol.sat.dat.csv tot.bp
+species	sat_gc	float	no	%, 0-100	dominant satellite GC	dtol.sat.dat.csv gc% x 100
+species	hor_regimentation	float	no	0-100; leave blank for Holocentric	HOR regimentation, dominant family	cen_families.csv regimentation_score
+species	hor_score	float	no	%; leave blank for Holocentric	HOR score, dominant family	cen_families.csv HOR_score
+species	te_mb	float	no	Mb	transposon content	EDTA
+species	te_pct	float	no	% of genome	transposon content	EDTA
+species	gene_mb	float	no	Mb	gene content	Helixer
+species	gene_pct	float	no	% of genome	gene content	Helixer
+species	trash_mb	float	no	Mb	all TRASH satellites (not shown in app)	TRASH
+species	trash_pct	float	no	% of genome	all TRASH satellites (not shown in app)	TRASH
+species	stack_pct	float	no	%	approx. te + gene + trash (not shown in app)	derived
+cenpa_sequences	species_id	string	yes	must exist in species.tsv	one row per CENP-A/CENH3 protein
+cenpa_sequences	id	string	yes	unique sequence ID	protein ID	CENP-A rescue pipeline
+cenpa_sequences	aa	string	yes	amino-acid sequence	protein sequence (length is computed)	CENP-A rescue pipeline
+sat_families	species_id	string	yes	must exist in species.tsv	one row per satellite family (top families)
+sat_families	fam	string	yes	family label	satellite family	TRASH
+sat_families	n	int	yes	count	copies	TRASH
+sat_families	bp	int	yes	bp	total bp	TRASH
+sat_families	width	int	yes	bp	monomer length	TRASH
+sat_families	gc	float	yes	%, 0-100	family GC	TRASH
