@@ -147,16 +147,18 @@ So the species key is the **tip label, lower-cased, with any trailing `.fa` remo
 |---|---|---|---|---|
 | `sat_pct` | number \| null | % of genome in the centromeric satellite | stats counter, outer bar, dossier | centromere-length / satellite species table |
 | `cen_mb` | number \| null | Mb, centromere size | dossier | centromere-length table |
-| `n_sat_fam` | int \| null | number of centromeric satellite families | dossier | centromere satellite table |
-| `sat_families` | array of `{fam: string, n: int, bp: int, width: int, gc: number}` | `n` copies, `bp` total bp, `width` monomer bp, `gc` % | dossier table | TRASH satellite calls, top families |
-| `rep_seq` | string \| null | DNA, representative monomer of the dominant family | dossier | TRASH |
-| `sat_monomer` | int \| null | bp, dominant monomer length | ring | `dtol.sat.dat.csv` → `width` (dominant family by copy number) |
-| `sat_totbp` | int \| null | bp, total array size of dominant family | ring | `dtol.sat.dat.csv` → `tot.bp` |
-| `sat_gc` | number \| null | %, GC of dominant family (0–100) | dossier | `dtol.sat.dat.csv` → `gc%` × 100 |
+| `n_sat_fam` | int \| null | number of centromeric satellite families | dossier | **derived** = `len(sat_families)` |
+| `sat_families` | array of `{fam: string, n: int, bp: int, width: int, gc: number, trash_fam: string}` | **all** centromeric families, sorted by `n` (copies) descending, so the first is dominant. `bp` total bp, `width` monomer bp, `gc` %, `trash_fam` TRASH ID (join key to the HOR table) | dossier table (★ = dominant) | `dtol.sat.dat.csv` (one row per family) |
+| `rep_seq` | string \| null | DNA, 600 bp: a representative satellite stretch, **not a monomer** | dossier | TRASH (as supplied) |
+| `sat_monomer` | int \| null | bp, dominant monomer length | ring | **derived** = dominant family `width` |
+| `sat_totbp` | int \| null | bp, total array size of dominant family | ring | **derived** = dominant family `bp` |
+| `sat_gc` | number \| null | %, GC of dominant family (0–100) | dossier | **derived** = dominant family `gc` |
 | `hor_regimentation` | number \| null | 0–100 | ring, dossier | `cen_families.csv` → `regimentation_score`, dominant family; **null for Holocentric** |
 | `hor_score` | number \| null | % | ring, dossier | `cen_families.csv` → `HOR_score`; **null for Holocentric** |
 
 "Dominant family" for species with several satellite families means **the family with the highest copy number**. This follows the paper's convention (Ian's); it is not a weighted mean.
+
+**The species-level satellite numbers are derived, never entered.** `n_sat_fam`, `sat_monomer`, `sat_totbp` and `sat_gc` are computed from `sat_families`: sort by `n` descending (ties broken by `bp`), take the first family. The converter and `build_atlas_data.py` both compute them, and `validate_tree_data.py` raises an error if a file disagrees. Before 2026-11-06 the JSON kept only the top 3 families **by total bp** while the summaries used copy number, so the two could disagree (e.g. *iyLasVill1.1*). The HOR values (`hor_regimentation`, `hor_score`) are not derived this way: they come from the HOR table's dominant family, joined through `trash_fam`.
 
 ### 3d. Genome and annotation
 

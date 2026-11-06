@@ -165,7 +165,7 @@
             "null"
           ],
           "minimum": 0,
-          "description": "Number of centromeric satellite families"
+          "description": "Number of centromeric satellite families \u2014 DERIVED from sat_families (dominant = most copies)"
         },
         "sat_families": {
           "type": "array",
@@ -198,16 +198,21 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 100
+              },
+              "trash_fam": {
+                "type": "string",
+                "description": "TRASH family ID; join key to HOR table"
               }
             }
-          }
+          },
+          "description": "ALL centromeric satellite families, sorted by copy number (n) descending; first = dominant"
         },
         "rep_seq": {
           "type": [
             "string",
             "null"
           ],
-          "description": "Representative monomer (DNA) of dominant family"
+          "description": "Representative satellite sequence (600 bp stretch, not a monomer)"
         },
         "sat_monomer": {
           "type": [
@@ -215,7 +220,7 @@
             "null"
           ],
           "minimum": 0,
-          "description": "Dominant satellite monomer length, bp"
+          "description": "Dominant satellite monomer length, bp \u2014 DERIVED from sat_families (dominant = most copies)"
         },
         "sat_totbp": {
           "type": [
@@ -223,7 +228,7 @@
             "null"
           ],
           "minimum": 0,
-          "description": "Dominant satellite total array bp"
+          "description": "Dominant satellite total array bp \u2014 DERIVED from sat_families (dominant = most copies)"
         },
         "sat_gc": {
           "type": [
@@ -232,7 +237,7 @@
           ],
           "minimum": 0,
           "maximum": 100,
-          "description": "Dominant satellite GC %, 0-100"
+          "description": "Dominant satellite GC %, 0-100 \u2014 DERIVED from sat_families (dominant = most copies)"
         },
         "hor_regimentation": {
           "type": [

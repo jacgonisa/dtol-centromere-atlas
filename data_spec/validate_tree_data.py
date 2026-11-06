@@ -8,6 +8,7 @@ Checks
   * every newick tip maps to a species key with the app's join rule
     (tip.lower() with a trailing ".fa" removed) and every key is a tip
   * required fields, types, enums, ranges and colour consistency (see DATA_SPEC.md §3)
+  * satellite summaries (n_sat_fam, sat_monomer/totbp/gc) == derived from sat_families
   * n_cenpa == len(cenpa_sequences), cenpa length == len(aa), holocentric => no HOR values
   * frozen tree: md5(newick) == meta.newick_md5 (paper tree = 4b403fa34ad997413d975c9b93d1517b)
   * optional: every tip is a species_id in the manifest (include_in_tree == yes)
@@ -96,6 +97,13 @@ def main(argv):
                 W(f"{k}: n_cenpa={r['n_cenpa']} but {len(seqs)} sequences")
         for fam in r.get("sat_families", []) or []:
             if not {"fam", "n", "bp", "width", "gc"} <= set(fam): E(f"{k}: sat_families entry missing fam/n/bp/width/gc")
+        fams = r.get("sat_families") or []
+        if fams:
+            top = max(fams, key=lambda x: (x.get("n", 0), x.get("bp", 0)))
+            for f, col in (("sat_monomer", "width"), ("sat_totbp", "bp"), ("sat_gc", "gc")):
+                if r.get(f) != top.get(col): E(f"{k}: {f}={r.get(f)} but dominant family (most copies) has {col}={top.get(col)}")
+            if r.get("n_sat_fam") != len(fams): E(f"{k}: n_sat_fam={r.get('n_sat_fam')} but {len(fams)} sat_families")
+        elif r.get("n_sat_fam"): E(f"{k}: n_sat_fam={r['n_sat_fam']} but no sat_families listed")
         if r.get("arch") == "Holocentric" and (r.get("hor_regimentation") is not None or r.get("hor_score") is not None):
             E(f"{k}: Holocentric species must have null HOR values")
 

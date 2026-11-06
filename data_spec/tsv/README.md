@@ -4,9 +4,9 @@ Three tab-separated tables, **pre-filled with the current 325 species**. Use the
 
 | File | One row per | Key |
 |---|---|---|
-| `species.tsv` | species (26 columns) | `species_id` |
+| `species.tsv` | species (22 columns) | `species_id` |
 | `cenpa_sequences.tsv` | CENP-A/CENH3 protein (0..n per species) | `species_id` + `id` |
-| `sat_families.tsv` | satellite family (0..n per species) | `species_id` + `fam` |
+| `sat_families.tsv` | satellite family: list **all** of them (0..n per species) | `species_id` + `fam` |
 | `fields.tsv` | column of the three tables above | `table` + `column` |
 
 Rules:
@@ -14,6 +14,7 @@ Rules:
 - **Empty cell = no data (null).** Required columns cannot be empty.
 - Write tabs and newlines inside text as `\t` and `\n`.
 - **Don't add colour columns or a sequence-length column.** `branch_col`, `arch_col` and the CENP-A `length` are computed by the converter.
+- **The satellite summaries are not in `species.tsv`.** `n_sat_fam`, `sat_monomer`, `sat_totbp` and `sat_gc` are computed from `sat_families.tsv`: dominant family = most copies (`n`). Just list every centromeric family, in any order.
 - If editing in Excel, save as *UTF-8 tab-delimited text* and check that no ID or number got auto-reformatted.
 
 Convert and check:

@@ -718,11 +718,12 @@ fetch('tree_data.json?v=' + Date.now())
       /* satellite family table */
       let famHtml = '';
       if(s2.sat_families && s2.sat_families.length){
-        famHtml = `<div class="section-title">Satellite families (top ${s2.sat_families.length})</div>
+        const fams=[...s2.sat_families].sort((a,b)=>b.n-a.n);   // dominant = most copies
+        famHtml = `<div class="section-title">Satellite families (${fams.length}, by copy number)</div>
           <table class="fam-table">
           <tr><th>Family</th><th>Copies</th><th>Total bp</th><th>Monomer (bp)</th><th>GC%</th></tr>` +
-          s2.sat_families.map(f=>`<tr>
-            <td>${f.fam}</td><td>${f.n.toLocaleString()}</td>
+          fams.map((f,i)=>`<tr${i===0?' style="font-weight:700" title="dominant family (most copies) — used for the monomer / array / GC values"':''}${f.trash_fam?` data-trash="${esc(f.trash_fam)}"`:''}>
+            <td>${esc(f.fam)}${i===0?' ★':''}</td><td>${f.n.toLocaleString()}</td>
             <td>${(f.bp/1e6).toFixed(2)} Mb</td><td>${f.width}</td><td>${f.gc}</td>
           </tr>`).join('') + '</table>';
       }
@@ -740,7 +741,7 @@ fetch('tree_data.json?v=' + Date.now())
       /* canonical sequence */
       let seqHtml = '';
       if(s2.rep_seq){
-        seqHtml = `<div class="seq-label">Canonical satellite sequence (dominant family)</div>
+        seqHtml = `<div class="seq-label">Representative satellite sequence</div>
           <div class="seq-box">${esc(s2.rep_seq)}</div>`;
       }
 

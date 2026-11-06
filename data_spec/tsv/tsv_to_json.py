@@ -6,7 +6,10 @@
 
 Column types come from fields.tsv (same folder as this script). Empty cell = null.
 Derived here (do NOT put them in the TSVs): branch_col (from broad), arch_col (from arch),
-cenpa length (from aa), the JSON key (species_id lower-cased), and the meta block.
+cenpa length (from aa), the JSON key (species_id lower-cased), the meta block, and the
+satellite summaries from sat_families.tsv: families are sorted by copy number (n, then bp);
+dominant = first; n_sat_fam = number of families; sat_monomer/sat_totbp/sat_gc = dominant's
+width/bp/gc.
 """
 import csv, hashlib, json, re, sys
 from pathlib import Path
@@ -69,6 +72,13 @@ def main(src, tree, out):
         k = r.pop("species_id").lower()
         if k not in species: sys.exit(f"sat_families: unknown species_id {k}")
         species[k]["sat_families"].append(r)
+
+    for r in species.values():                       # satellite summaries derive from the families
+        f = sorted(r["sat_families"], key=lambda x: (-x["n"], -x["bp"]))
+        r["sat_families"] = f
+        top = f[0] if f else {}
+        r["n_sat_fam"] = len(f) or None
+        r["sat_monomer"], r["sat_totbp"], r["sat_gc"] = top.get("width"), top.get("bp"), top.get("gc")
 
     keys = [t.lower() for t in tips]
     if set(keys) != set(species):
