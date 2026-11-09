@@ -104,6 +104,10 @@ def main(argv):
                 if r.get(f) != top.get(col): E(f"{k}: {f}={r.get(f)} but dominant family (most copies) has {col}={top.get(col)}")
             if r.get("n_sat_fam") != len(fams): E(f"{k}: n_sat_fam={r.get('n_sat_fam')} but {len(fams)} sat_families")
         elif r.get("n_sat_fam"): E(f"{k}: n_sat_fam={r['n_sat_fam']} but no sat_families listed")
+        if not fams and r.get("sat_pct"): E(f"{k}: sat_pct={r['sat_pct']} but no centromeric satellite families (ghost ring segment)")
+        if not fams and r.get("rep_seq"): E(f"{k}: rep_seq set but no centromeric satellite families")
+        if not fams and r.get("arch") in ("Satellite", "Satellite/transposon"):
+            W(f"{k}: arch={r['arch']} but no centromeric satellite families (classification vs satellite data)")
         if r.get("arch") == "Holocentric" and (r.get("hor_regimentation") is not None or r.get("hor_score") is not None):
             E(f"{k}: Holocentric species must have null HOR values")
 

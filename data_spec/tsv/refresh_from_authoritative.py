@@ -10,7 +10,8 @@ Updates, per species (matched by ToLID prefix):
   sat_families.tsv  : one row per centromeric satellite family (n, bp, width, gc, trash_fam)
                       -> the converter derives sat_monomer / sat_totbp / sat_gc / n_sat_fam
   species.tsv       : sat_pct  = 100 * sum(family bp) / chromosome length  (satellite segment of the
-                                 stacked-genome ring)
+                                 stacked-genome ring); species Piotr marks satellite==FALSE get
+                                 sat_pct and rep_seq cleared (no centromeric satellite)
                       hor_regimentation, hor_score  (dominant family; blank for Holocentric)
 
 Everything else (name, taxonomy, genome size/GC, architecture, CENP-A, TE%/gene% from Charla's
@@ -30,10 +31,10 @@ ALIAS = {"drroscani": "roscan_s"}        # Rosa canina: new data drRosCani -> at
 remap = lambda s: ALIAS.get(pfx(s), pfx(s))
 
 # ── satellite families + chromosome length, grouped by species prefix ──
-fams, chrlen = {}, {}
+fams, chrlen, nosat = {}, {}, set()
 for r in csv.DictReader(open(SAT)):
-    if r["satellite"] != "TRUE": continue
     p = remap(r["fasta_name"])
+    if r["satellite"] != "TRUE": nosat.add(p); continue
     n = int(round(float(r["satellite.count"]))); w = float(r["satellite.mean.length"])
     fams.setdefault(p, []).append({"fam": r["trash.name"], "n": n,
         "bp": int(round(n*w)), "width": int(round(w)), "gc": round(float(r["satellite.GC"]), 1),
@@ -54,13 +55,16 @@ numf = lambda v: "" if v in ("", "NA", None) else round(float(v), 2)
 # ── patch species.tsv ──
 sp = list(csv.DictReader(open(HERE/"species.tsv"), delimiter="\t"))
 cols = list(sp[0].keys())
-n_sat = n_hor = 0
+n_sat = n_hor = n_clear = 0
 for row in sp:
     p = pfx(row["species_id"])
     if p in fams:                                       # sat_pct from new data (ChrOnly denom)
         tot = sum(f["bp"] for f in fams[p])
         row["sat_pct"] = round(100*tot/chrlen[p], 2) if chrlen.get(p) else row["sat_pct"]
         n_sat += 1
+    elif p in nosat:                                    # Piotr: no centromeric satellite -> clear
+        if row["sat_pct"] or row["rep_seq"]: n_clear += 1
+        row["sat_pct"] = row["rep_seq"] = ""            # legacy values (would draw a ghost satellite segment)
     row["hor_regimentation"] = row["hor_score"] = ""    # all HOR originates from cen_families -> reset
     if p in hor and row["arch"] != "Holocentric":
         _, hs, rs, _ = hor[p]
@@ -83,4 +87,5 @@ with open(HERE/"sat_families.tsv", "w", newline="") as f:
             nrows += 1
 
 print(f"species.tsv: sat_pct set for {n_sat} spp, HOR set for {n_hor} spp (non-holo, dominant family)")
+print(f"species.tsv: cleared legacy sat_pct/rep_seq for {n_clear} spp Piotr marks satellite==FALSE")
 print(f"sat_families.tsv: {nrows} family rows across {len(fams)} species")

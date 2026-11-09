@@ -33,6 +33,18 @@ Why this matters: in the current 325-species build, the tree tips went through t
 
 ---
 
+## Pipeline (since 2026-11-09): TSV-first
+
+```
+Piotr's tables (November2026_finalsubmission_files/)            data_spec/tsv/*.tsv  (source of truth)
+  sat_bp_gc_count_data.csv, cen_families_Nov2026.csv  ──refresh_from_authoritative.py──▶  sat_families.tsv + species.tsv (sat_pct, HOR)
+                                                                                                    │ tsv_to_json.py (+ frozen tree)
+                                                                                                    ▼
+                                                                         tree_data.json ── validate_tree_data.py (must pass)
+```
+
+One command: `python3 build_atlas_data.py` (in `web_prototype/`). It runs all three steps and restores the previous `tree_data.json` if validation fails. Edit the TSVs, never the JSON. A species Piotr marks `satellite == FALSE` gets **no** satellite data: no families, and `sat_pct`/`rep_seq` are cleared.
+
 ## 1. Input per species
 
 ### 1a. Manifest row (`species_manifest.tsv`, tab-separated, UTF-8)
@@ -145,16 +157,16 @@ So the species key is the **tip label, lower-cased, with any trailing `.fa` remo
 
 | Field | Type | Unit | Used by app | Source |
 |---|---|---|---|---|
-| `sat_pct` | number \| null | % of genome in the centromeric satellite | stats counter, outer bar, dossier | centromere-length / satellite species table |
+| `sat_pct` | number \| null | % = 100 × Σ family `bp` / chromosome length; null if no centromeric satellite | stats counter, outer bar, dossier | computed from Piotr's `sat_bp_gc_count_data.csv` |
 | `cen_mb` | number \| null | Mb, centromere size | dossier | centromere-length table |
 | `n_sat_fam` | int \| null | number of centromeric satellite families | dossier | **derived** = `len(sat_families)` |
-| `sat_families` | array of `{fam: string, n: int, bp: int, width: int, gc: number, trash_fam: string}` | **all** centromeric families, sorted by `n` (copies) descending, so the first is dominant. `bp` total bp, `width` monomer bp, `gc` %, `trash_fam` TRASH ID (join key to the HOR table) | dossier table (★ = dominant) | `dtol.sat.dat.csv` (one row per family) |
-| `rep_seq` | string \| null | DNA, 600 bp: a representative satellite stretch, **not a monomer** | dossier | TRASH (as supplied) |
+| `sat_families` | array of `{fam: string, n: int, bp: int, width: int, gc: number, trash_fam: string}` | **all** centromeric families (`satellite == TRUE`), sorted by `n` descending (first = dominant). `fam` = `trash_fam` = TRASH name; `n` copies; `width` mean monomer bp; `bp` = n × width; `gc` % | dossier table (★ = dominant) | Piotr's `sat_bp_gc_count_data.csv` (Nov 2026) |
+| `rep_seq` | string \| null | DNA, 600 bp: a representative satellite stretch, **not a monomer**; null if no centromeric satellite | dossier | legacy TRASH output (not in Piotr's tables) |
 | `sat_monomer` | int \| null | bp, dominant monomer length | ring | **derived** = dominant family `width` |
 | `sat_totbp` | int \| null | bp, total array size of dominant family | ring | **derived** = dominant family `bp` |
 | `sat_gc` | number \| null | %, GC of dominant family (0–100) | dossier | **derived** = dominant family `gc` |
-| `hor_regimentation` | number \| null | 0–100 | ring, dossier | `cen_families.csv` → `regimentation_score`, dominant family; **null for Holocentric** |
-| `hor_score` | number \| null | % | ring, dossier | `cen_families.csv` → `HOR_score`; **null for Holocentric** |
+| `hor_regimentation` | number \| null | 0–100 | ring, dossier | Piotr's `cen_families_Nov2026.csv` → `regimentation_score`, dominant family (highest `count_total`); **null for Holocentric** |
+| `hor_score` | number \| null | % | ring, dossier | Piotr's `cen_families_Nov2026.csv` → `HOR_score`; **null for Holocentric** |
 
 "Dominant family" for species with several satellite families means **the family with the highest copy number**. This follows the paper's convention (Ian's); it is not a weighted mean.
 

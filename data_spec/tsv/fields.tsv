@@ -9,11 +9,11 @@ species	chrs	int	yes	count	chromosome count	master chrs
 species	genome_gc	float	yes	%, 0-100, 2 decimals	genome GC	master genome.gc
 species	n_cenpa	int	no	count >= 0	number of CENP-A/CENH3 paralogues; should equal its row count in cenpa_sequences.tsv	CENP-A copy-number table
 species	satellite1	string	no	free text	curator note on the centromere call	master satellite1
-species	sat_pct	float	no	% of genome	centromeric satellite share of genome	centromere-length table
+species	sat_pct	float	no	% of genome; blank if no centromeric satellite	centromeric satellite share: 100 x sum(family bp) / chromosome length	computed from Piotr sat_bp_gc_count_data.csv (Chromosome.length.bp.)
 species	cen_mb	float	no	Mb	centromere size	centromere-length table
-species	rep_seq	string	no	DNA, 600 bp	representative satellite sequence (a 600-bp stretch, not a monomer)	TRASH
-species	hor_regimentation	float	no	0-100; leave blank for Holocentric	HOR regimentation, dominant family	cen_families.csv regimentation_score
-species	hor_score	float	no	%; leave blank for Holocentric	HOR score, dominant family	cen_families.csv HOR_score
+species	rep_seq	string	no	DNA, 600 bp	representative satellite sequence (a 600-bp stretch, not a monomer)	legacy TRASH; cleared when Piotr marks satellite==FALSE
+species	hor_regimentation	float	no	0-100; leave blank for Holocentric	HOR regimentation, dominant family	Piotr cen_families_Nov2026.csv regimentation_score (dominant = highest count_total)
+species	hor_score	float	no	%; leave blank for Holocentric	HOR score, dominant family	Piotr cen_families_Nov2026.csv HOR_score (dominant = highest count_total)
 species	te_mb	float	no	Mb	transposon content	EDTA
 species	te_pct	float	no	% of genome	transposon content	EDTA
 species	gene_mb	float	no	Mb	gene content	Helixer
@@ -25,9 +25,9 @@ cenpa_sequences	species_id	string	yes	must exist in species.tsv	one row per CENP
 cenpa_sequences	id	string	yes	unique sequence ID	protein ID	CENP-A rescue pipeline
 cenpa_sequences	aa	string	yes	amino-acid sequence	protein sequence (length is computed)	CENP-A rescue pipeline
 sat_families	species_id	string	yes	must exist in species.tsv	one row per centromeric satellite family - list ALL families, any order
-sat_families	fam	string	yes	family label	satellite family	TRASH
-sat_families	n	int	yes	count	copies	TRASH
-sat_families	bp	int	yes	bp	total bp	TRASH
-sat_families	width	int	yes	bp	monomer length	TRASH
-sat_families	gc	float	yes	%, 0-100	family GC	TRASH
-sat_families	trash_fam	string	no	TRASH class, e.g. 186_1	TRASH family ID; join key to the HOR table (cen_families.csv TRASH_new_class)	dtol.sat.dat.csv trash.fam
+sat_families	fam	string	yes	TRASH name, e.g. 173_1	satellite family (TRASH name; same as trash_fam)	Piotr sat_bp_gc_count_data.csv trash.name
+sat_families	n	int	yes	count	copies	Piotr satellite.count
+sat_families	bp	int	yes	bp	total bp = n x mean monomer length	computed: satellite.count x satellite.mean.length
+sat_families	width	int	yes	bp	monomer length (mean, rounded)	Piotr satellite.mean.length
+sat_families	gc	float	yes	%, 0-100	family GC	Piotr satellite.GC
+sat_families	trash_fam	string	no	TRASH class, e.g. 186_1	TRASH family ID; join key to the HOR table (cen_families.csv TRASH_new_class)	Piotr trash.name; joins cen_families_Nov2026.csv TRASH_new_class
