@@ -161,7 +161,7 @@ So the species key is the **tip label, lower-cased, with any trailing `.fa` remo
 | `cen_mb` | number \| null | Mb, centromere size | dossier | centromere-length table |
 | `n_sat_fam` | int \| null | number of centromeric satellite families | dossier | **derived** = `len(sat_families)` |
 | `sat_families` | array of `{fam: string, n: int, bp: int, width: int, gc: number, trash_fam: string}` | **all** centromeric families (`satellite == TRUE`), sorted by `n` descending (first = dominant). `fam` = `trash_fam` = TRASH name; `n` copies; `width` mean monomer bp; `bp` = n × width; `gc` % | dossier table (★ = dominant) | Piotr's `sat_bp_gc_count_data.csv` (Nov 2026) |
-| `rep_seq` | string \| null | DNA, 600 bp: a representative satellite stretch, **not a monomer**; null if no centromeric satellite | dossier | legacy TRASH output (not in Piotr's tables) |
+| `rep_seq` | string \| null | DNA, 591 bp: a representative satellite stretch, **not a monomer**; null if no centromeric satellite | dossier | legacy TRASH output (not in Piotr's tables) |
 | `sat_monomer` | int \| null | bp, dominant monomer length | ring | **derived** = dominant family `width` |
 | `sat_totbp` | int \| null | bp, total array size of dominant family | ring | **derived** = dominant family `bp` |
 | `sat_gc` | number \| null | %, GC of dominant family (0–100) | dossier | **derived** = dominant family `gc` |

@@ -11,7 +11,7 @@ species	n_cenpa	int	no	count >= 0	number of CENP-A/CENH3 paralogues; should equa
 species	satellite1	string	no	free text	curator note on the centromere call	master satellite1
 species	sat_pct	float	no	% of genome; blank if no centromeric satellite	centromeric satellite share: 100 x sum(family bp) / chromosome length	computed from Piotr sat_bp_gc_count_data.csv (Chromosome.length.bp.)
 species	cen_mb	float	no	Mb	centromere size	centromere-length table
-species	rep_seq	string	no	DNA, 600 bp	representative satellite sequence (a 600-bp stretch, not a monomer)	legacy TRASH; cleared when Piotr marks satellite==FALSE
+species	rep_seq	string	no	DNA, 591 bp, one line (no line breaks)	representative satellite sequence (591-bp stretch, not a monomer)	legacy TRASH; cleared when Piotr marks satellite==FALSE
 species	hor_regimentation	float	no	0-100; leave blank for Holocentric	HOR regimentation, dominant family	Piotr cen_families_Nov2026.csv regimentation_score (dominant = highest count_total)
 species	hor_score	float	no	%; leave blank for Holocentric	HOR score, dominant family	Piotr cen_families_Nov2026.csv HOR_score (dominant = highest count_total)
 species	te_mb	float	no	Mb	transposon content	EDTA
@@ -21,10 +21,10 @@ species	gene_pct	float	no	% of genome	gene content	Helixer
 species	trash_mb	float	no	Mb	all TRASH satellites (not shown in app)	TRASH
 species	trash_pct	float	no	% of genome	all TRASH satellites (not shown in app)	TRASH
 species	stack_pct	float	no	%	approx. te + gene + trash (not shown in app)	derived
-cenpa_sequences	species_id	string	yes	must exist in species.tsv	one row per CENP-A/CENH3 protein
+cenpa_sequences	species_id	string	yes	must exist in species.tsv	one row per CENP-A/CENH3 protein	
 cenpa_sequences	id	string	yes	unique sequence ID	protein ID	CENP-A rescue pipeline
 cenpa_sequences	aa	string	yes	amino-acid sequence	protein sequence (length is computed)	CENP-A rescue pipeline
-sat_families	species_id	string	yes	must exist in species.tsv	one row per centromeric satellite family - list ALL families, any order
+sat_families	species_id	string	yes	must exist in species.tsv	one row per centromeric satellite family - list ALL families, any order	
 sat_families	fam	string	yes	TRASH name, e.g. 173_1	satellite family (TRASH name; same as trash_fam)	Piotr sat_bp_gc_count_data.csv trash.name
 sat_families	n	int	yes	count	copies	Piotr satellite.count
 sat_families	bp	int	yes	bp	total bp = n x mean monomer length	computed: satellite.count x satellite.mean.length

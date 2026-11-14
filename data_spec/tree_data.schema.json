@@ -212,7 +212,8 @@
             "string",
             "null"
           ],
-          "description": "Representative satellite sequence (600 bp stretch, not a monomer)"
+          "pattern": "^[ACGTNacgtn]+$",
+          "description": "Representative satellite sequence: 591-bp stretch, one line, not a monomer; null if no centromeric satellite"
         },
         "sat_monomer": {
           "type": [

@@ -106,6 +106,9 @@ def main(argv):
         elif r.get("n_sat_fam"): E(f"{k}: n_sat_fam={r['n_sat_fam']} but no sat_families listed")
         if not fams and r.get("sat_pct"): E(f"{k}: sat_pct={r['sat_pct']} but no centromeric satellite families (ghost ring segment)")
         if not fams and r.get("rep_seq"): E(f"{k}: rep_seq set but no centromeric satellite families")
+        if r.get("rep_seq") and not re.fullmatch(r"[ACGTNacgtn]+", r["rep_seq"]): E(f"{k}: rep_seq must be one line of DNA (no line breaks/spaces)")
+        for f in ("name", "satellite1", "taxa1"):
+            if isinstance(r.get(f), str) and r[f] != r[f].strip(): W(f"{k}: '{f}' has leading/trailing whitespace")
         if not fams and r.get("arch") in ("Satellite", "Satellite/transposon"):
             W(f"{k}: arch={r['arch']} but no centromeric satellite families (classification vs satellite data)")
         if r.get("arch") == "Holocentric" and (r.get("hor_regimentation") is not None or r.get("hor_score") is not None):

@@ -53,8 +53,11 @@ for r in csv.DictReader(open(CF)):
 numf = lambda v: "" if v in ("", "NA", None) else round(float(v), 2)
 
 # ── patch species.tsv ──
-sp = list(csv.DictReader(open(HERE/"species.tsv"), delimiter="\t"))
+sp = list(csv.DictReader(open(HERE/"species.tsv", newline=""), delimiter="\t"))
 cols = list(sp[0].keys())
+for row in sp:                                          # hygiene: trimmed text, unwrapped sequences
+    for c in cols: row[c] = row[c].strip()
+    row["rep_seq"] = row["rep_seq"].replace("\\n", "").replace("\n", "")
 n_sat = n_hor = n_clear = 0
 for row in sp:
     p = pfx(row["species_id"])
@@ -71,13 +74,13 @@ for row in sp:
         row["hor_regimentation"], row["hor_score"] = numf(rs), numf(hs); n_hor += 1
 
 with open(HERE/"species.tsv", "w", newline="") as f:
-    w = csv.DictWriter(f, fieldnames=cols, delimiter="\t"); w.writeheader(); w.writerows(sp)
+    w = csv.DictWriter(f, fieldnames=cols, delimiter="\t", lineterminator="\n"); w.writeheader(); w.writerows(sp)
 
 # ── rebuild sat_families.tsv ──
 sid_by_pfx = {pfx(r["species_id"]): r["species_id"] for r in sp}
 sf_cols = ["species_id","fam","n","bp","width","gc","trash_fam"]
 with open(HERE/"sat_families.tsv", "w", newline="") as f:
-    w = csv.DictWriter(f, fieldnames=sf_cols, delimiter="\t"); w.writeheader()
+    w = csv.DictWriter(f, fieldnames=sf_cols, delimiter="\t", lineterminator="\n"); w.writeheader()
     nrows = 0
     for p, fl in fams.items():
         sid = sid_by_pfx.get(p)
